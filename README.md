@@ -13,7 +13,7 @@
 
 <img width="1376" height="768" alt="image" src="https://github.com/user-attachments/assets/362fa5b1-55b8-4302-8d80-c27e5fd59286" />
 
-
+- 📘 [Target Diseases](docs/DISEASES.md) — Clinical overview of the five thoracic diseases and model performance.
 ---
 
 # 📖 Overview
