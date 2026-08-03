@@ -11,7 +11,8 @@
 ![Grad-CAM](https://img.shields.io/badge/Explainability-Grad--CAM-orange?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-<img width="1376" height="768" alt="image" src="https://github.com/user-attachments/assets/362fa5b1-55b8-4302-8d80-c27e5fd59286" />
+<img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/1c646a7c-247d-4e5e-910a-8df9b88fa4a8" />
+
 
 - 📘 [Target Diseases](docs/DISEASES.md) — Clinical overview of the five thoracic diseases and model performance.
 ---
