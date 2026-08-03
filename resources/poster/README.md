@@ -14,3 +14,6 @@ The poster summarizes the complete project in a concise visual format, highlight
 * Key takeaways
 
 It is designed for academic showcases, technical presentations, portfolio demonstrations, and conference-style project summaries.
+
+<img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/0fcda1d1-e2b1-4f6c-be9d-446d15130288" />
+
