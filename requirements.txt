@@ -1,0 +1,12 @@
+torch==2.11.0
+torchvision==0.26.0
+numpy==2.0.2
+pandas==2.2.2
+matplotlib==3.10.0
+scikit-learn==1.6.1
+opencv-python
+Pillow
+tqdm
+grad-cam
+jupyter
+notebook
