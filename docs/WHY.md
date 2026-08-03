@@ -84,7 +84,6 @@ This repository is **not** intended to be:
 
 * A clinical diagnostic system
 * A replacement for professional medical expertise
-* A production deployment or MLOps project
 * A peer-reviewed medical research study
 
 The focus is on demonstrating practical deep learning engineering, reproducible experimentation, and explainable AI using a widely recognized medical imaging benchmark.
