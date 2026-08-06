@@ -137,7 +137,13 @@ The CheXpert dataset contains multiple thoracic findings with varying frequencie
 
 These diseases represent a diverse set of thoracic abnormalities and allow the project to demonstrate transfer learning, multi-label prediction, and comprehensive evaluation within a manageable scope.
 
----
+## 🤗 Pre-trained Model
+
+The trained DenseNet121 weights are available on Hugging Face Hub.
+
+**Model Repository:** https://huggingface.co/AtomicHalifax/ChestXRay-DenseNet121
+
+Download the weights and place `best_densenet121.pth` inside the `models/` directory before running inference.
 
 # 🔄 Workflow Overview
 
