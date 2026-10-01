@@ -1,0 +1,12 @@
+.git
+.github
+notebooks
+images
+resources
+docs
+runs
+mlruns
+results
+**/__pycache__
+*.pth
+*.ipynb
