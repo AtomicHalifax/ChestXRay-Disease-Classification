@@ -53,6 +53,45 @@ python app.py
 
 Weights: [`AtomicHalifax/ChestXRay-DenseNet121`](https://huggingface.co/AtomicHalifax/ChestXRay-DenseNet121) on Hugging Face.
 
+### Serve it (API + Docker)
+
+```bash
+docker compose up --build          # API on :8000 (docs at /docs), MLflow UI on :5000
+curl -F file=@xray.jpg localhost:8000/predict
+curl -F file=@xray.jpg -o cam.png "localhost:8000/explain?finding=Edema"
+```
+
+| Endpoint | What it does |
+| --- | --- |
+| `GET /health` | Liveness check, used by the Docker healthcheck |
+| `GET /version` | API version, model version, SHA-256 of the loaded weights |
+| `POST /predict` | Five probabilities, the top finding, input-quality warnings, latency |
+| `POST /explain` | Grad-CAM overlay PNG for one finding |
+| `GET /metrics` | Prometheus metrics: request counts, latency, prediction distribution (for drift monitoring) |
+
+## MLOps
+
+```
+ train.csv ──► validate_csv ──► train.py ──► MLflow (params, metrics, best.pth)
+                                   │
+                                   ▼
+                 Hugging Face Hub (versioned weights, SHA-256 pinned)
+                                   │
+ git push ──► CI: ruff + pytest ──► docker build ──► container smoke test
+ git tag v* ──► Release: build image (weights baked in) ──► ghcr.io/<owner>/chexpert-api
+                                   │
+                                   ▼
+                FastAPI service ──► /metrics ──► Prometheus / Grafana
+```
+
+- **Data validation:** `validate_csv` checks columns, label values, duplicate paths and path layout before training starts.
+- **Experiment tracking:** `train.py --mlflow` logs every run's params, per-epoch metrics, final validation AUROCs and artifacts.
+- **Model versioning:** `MODEL_VERSION` is on every API response. Setting `CHEXPERT_WEIGHTS_SHA256` stops the service from starting if the weights file differs.
+- **Input guard:** the API warns about (or, with `CHEXPERT_STRICT_INPUT=1`, rejects) images that are colour, tiny or oddly shaped.
+- **CI/CD:** every push runs lint, unit and API tests, builds the image and smoke-tests the container. A `v*` tag publishes the image to GHCR.
+
+A plain-language walkthrough of the whole project is in [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md).
+
 ### Reproduce training and evaluation
 
 Get **CheXpert-v1.0-small** from [Stanford AIMI](https://aimi.stanford.edu/datasets/chexpert-chest-x-rays) (or the [Kaggle mirror](https://www.kaggle.com/datasets/ashery/chexpert)). Point `--data-root` at the folder containing `train.csv` and `valid.csv`.
@@ -81,9 +120,13 @@ This is a reproduction of the DenseNet121 U-Ignore baseline from the CheXpert pa
 ## Repository layout
 
 ```
-src/chexpert_cls/   config, data (label policies, patient split), model, train, evaluate, predict, gradcam, metrics
+src/chexpert_cls/   config, data (label policies, patient split), validation, model, train, evaluate,
+                    predict, gradcam, metrics, api (FastAPI service)
 app.py              Gradio demo (Hugging Face Space ready)
-tests/              pytest: label handling, patient split, metrics, model + Grad-CAM smoke tests
+tests/              pytest: labels, patient split, metrics, validation, model, Grad-CAM, API contract
+Dockerfile          CPU inference image (non-root, healthcheck, optional baked weights)
+docker-compose.yml  API + MLflow tracking server
+.github/workflows/  ci.yml (lint, tests, docker smoke test), release.yml (publish image to GHCR)
 notebooks/          original exploration (00) and evaluation (01) notebooks
 docs/               dataset, architecture, training, evaluation and limitations notes
 images/             evaluation figures

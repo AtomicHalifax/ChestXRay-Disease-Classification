@@ -1,0 +1,25 @@
+# Local stack: inference API + MLflow tracking server.
+#   docker compose up --build
+#   API:    http://localhost:8000/docs
+#   MLflow: http://localhost:5000
+# Train against the tracking server from the host:
+#   MLFLOW_TRACKING_URI=http://localhost:5000 python -m chexpert_cls.train --data-root ... --mlflow
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      CHEXPERT_STRICT_INPUT: "0"
+    volumes:
+      - hf-cache:/home/app/.cache/huggingface
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    command: mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow/mlflow.db --default-artifact-root /mlflow/artifacts
+    ports: ["5000:5000"]
+    volumes:
+      - mlflow-data:/mlflow
+
+volumes:
+  hf-cache:
+  mlflow-data:

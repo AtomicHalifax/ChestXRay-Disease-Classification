@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chexpert-cls"
-version = "1.1.0"
+version = "1.2.0"
 description = "Multi-label chest X-ray classification on CheXpert with DenseNet121 and Grad-CAM"
 authors = [{ name = "Athrva Raval" }]
 license = { text = "MIT" }
@@ -21,8 +21,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+serve = ["fastapi>=0.110", "uvicorn[standard]>=0.29", "python-multipart", "prometheus-client"]
+track = ["mlflow>=2.10"]
 demo = ["gradio>=4"]
-dev = ["pytest", "ruff"]
+dev = ["pytest", "ruff", "httpx"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
