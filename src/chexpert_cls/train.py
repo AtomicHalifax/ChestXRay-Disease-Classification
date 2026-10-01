@@ -27,6 +27,7 @@ from .config import TARGET_DISEASES
 from .data import CheXpertDataset, apply_label_policy, build_transforms, patient_split
 from .metrics import bootstrap_auroc
 from .model import build_model
+from .validation import validate_csv
 
 
 def set_seed(seed: int) -> None:
@@ -68,6 +69,8 @@ def main(argv=None) -> None:
     ap.add_argument("--pos-weight", action="store_true", help="Class-balanced BCE")
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--mlflow", action="store_true", help="Log params/metrics/artifacts to MLflow")
+    ap.add_argument("--experiment", default="chexpert-densenet121")
     args = ap.parse_args(argv)
 
     set_seed(args.seed)
@@ -75,6 +78,9 @@ def main(argv=None) -> None:
     args.out.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_csv(args.data_root / "train.csv")
+    problems = validate_csv(df, min_rows=100)
+    if problems:
+        raise SystemExit("train.csv failed validation:\n  " + "\n  ".join(problems))
     df = apply_label_policy(df, args.policy, frontal_only=args.frontal_only)
     train_df, tune_df = patient_split(df, args.tune_frac, args.seed)
     print(f"train images {len(train_df):,} | tune images {len(tune_df):,} (patient-disjoint)")
@@ -95,6 +101,7 @@ def main(argv=None) -> None:
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
     scaler = torch.amp.GradScaler(enabled=device.type == "cuda")
 
+    tracker = _Tracker(args) if args.mlflow else None
     best, history = -1.0, []
     for epoch in range(1, args.epochs + 1):
         model.train()
@@ -114,6 +121,8 @@ def main(argv=None) -> None:
         m, per = mean_auroc(y, p)
         history.append({"epoch": epoch, "train_loss": running / len(train_dl), "tune_mean_auroc": m, **per})
         print(f"epoch {epoch:02d} loss {running / len(train_dl):.4f} tune mAUROC {m:.4f}")
+        if tracker:
+            tracker.epoch(history[-1])
         if m > best:
             best = m
             torch.save(model.state_dict(), args.out / "best.pth")
@@ -133,6 +142,32 @@ def main(argv=None) -> None:
     report["mean_auroc"] = float(np.mean([v["auroc"] for v in report.values()]))
     print(f"mean AUROC {report['mean_auroc']:.4f}")
     (args.out / "valid_report.json").write_text(json.dumps(report, indent=2))
+    if tracker:
+        tracker.finish(args.out, report)
+
+
+class _Tracker:
+    """Thin MLflow wrapper so mlflow stays an optional dependency."""
+
+    def __init__(self, args):
+        import mlflow
+
+        self.mlflow = mlflow
+        mlflow.set_experiment(args.experiment)
+        mlflow.start_run()
+        mlflow.log_params({k: str(v) for k, v in vars(args).items()})
+
+    def epoch(self, row: dict) -> None:
+        step = row["epoch"]
+        self.mlflow.log_metrics({k.replace(" ", "_"): v for k, v in row.items() if k != "epoch"}, step=step)
+
+    def finish(self, out: Path, report: dict) -> None:
+        self.mlflow.log_metric("valid_mean_auroc", report["mean_auroc"])
+        for d in TARGET_DISEASES:
+            self.mlflow.log_metric(f"valid_auroc_{d.replace(' ', '_')}", report[d]["auroc"])
+        for name in ("best.pth", "history.json", "valid_report.json"):
+            self.mlflow.log_artifact(str(out / name))
+        self.mlflow.end_run()
 
 
 if __name__ == "__main__":

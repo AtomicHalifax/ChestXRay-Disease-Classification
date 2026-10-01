@@ -13,19 +13,19 @@ def gradcam(model: torch.nn.Module, x: torch.Tensor, class_idx: int) -> tuple[np
     Re-runs DenseNet's forward explicitly (features -> ReLU -> GAP ->
     classifier) instead of using module hooks, because torchvision's
     DenseNet applies an in-place ReLU that breaks full backward hooks.
+    Uses torch.autograd.grad, so no parameter .grad buffers are touched and
+    concurrent requests in the API cannot interfere with each other.
 
     Returns (heatmap [H, W] in [0, 1], probability for class_idx).
     """
     model.eval()
-    model.zero_grad(set_to_none=True)
     with torch.enable_grad():
         acts = F.relu(model.features(x))
-        acts.retain_grad()
         pooled = F.adaptive_avg_pool2d(acts, 1).flatten(1)
         logits = model.classifier(pooled)
-        logits[0, class_idx].backward()
+        (grads,) = torch.autograd.grad(logits[0, class_idx], acts)
 
-    weights = acts.grad.mean(dim=(2, 3), keepdim=True)
+    weights = grads.mean(dim=(2, 3), keepdim=True)
     cam = F.relu((weights * acts).sum(dim=1, keepdim=True)).detach()
     cam = F.interpolate(cam, size=x.shape[-2:], mode="bilinear", align_corners=False)
     cam = cam[0, 0].cpu().numpy()
