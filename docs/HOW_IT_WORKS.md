@@ -161,17 +161,6 @@ The `Dockerfile` packages Python, CPU-only PyTorch, the code and (optionally) th
 
 ---
 
-## 9. Likely interview questions, with short answers
-
-**Why DenseNet121?**
-It's the backbone used in the CheXpert and CheXNet papers. It's well-studied on chest X-rays, small enough for a free GPU, and good with transfer learning.
-
-**Why AUROC and not accuracy?**
-Most images are negative for any one finding, so a model that always says "no" gets high accuracy. AUROC measures how well the model ranks sick above healthy, regardless of threshold.
-
-**Why sigmoid and not softmax?**
-The findings aren't mutually exclusive. Softmax forces the probabilities to sum to 1, while sigmoid treats each finding as its own yes/no question.
-
 **What would you do next?**
 Retrain with the fixed protocol, compare U-Ones vs U-Ignore, use 320-pixel images, test on an external dataset, and calibrate the probabilities.
 
