@@ -16,8 +16,28 @@ jobs:
       - name: Install (CPU torch)
         run: |
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          pip install -e ".[dev]"
+          pip install -e ".[dev,serve]"
       - name: Lint
         run: ruff check src tests app.py
       - name: Test
         run: pytest -q
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t chexpert-api:ci .
+      - name: Smoke test container
+        run: |
+          docker run -d --name api -p 8000:8000 -e CHEXPERT_RANDOM_WEIGHTS=1 chexpert-api:ci
+          for i in $(seq 1 30); do curl -sf localhost:8000/health && break; sleep 2; done
+          curl -sf localhost:8000/version
+          docker run --rm --user root -v "$PWD:/w" chexpert-api:ci python -c "from PIL import Image; Image.new('L',(320,320),128).save('/w/x.png')"
+          curl -sf -F file=@x.png localhost:8000/predict
+          curl -sf -F file=@x.png -o cam.png "localhost:8000/explain?finding=Edema"
+          file cam.png | grep -q PNG
+      - name: Container logs
+        if: always()
+        run: docker logs api || true
