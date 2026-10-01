@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chexpert-cls"
+version = "1.1.0"
+description = "Multi-label chest X-ray classification on CheXpert with DenseNet121 and Grad-CAM"
+authors = [{ name = "Athrva Raval" }]
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = [
+  "torch>=2.2",
+  "torchvision>=0.17",
+  "numpy",
+  "pandas",
+  "scikit-learn",
+  "matplotlib",
+  "Pillow",
+  "huggingface_hub",
+]
+
+[project.optional-dependencies]
+demo = ["gradio>=4"]
+dev = ["pytest", "ruff"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+src = ["src"]

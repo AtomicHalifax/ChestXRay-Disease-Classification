@@ -1,33 +1,18 @@
 cff-version: 1.2.0
-title: "Chest X-Ray Disease Classification using DenseNet121"
-message: "If you use this repository in your work, please cite it using the metadata below."
+title: "Chest X-ray Finding Classification (CheXpert, DenseNet121)"
+message: "If you use this repository, please cite it using the metadata below."
 type: software
-
 authors:
-
+  - family-names: Raval
+    given-names: Athrva
 repository-code: "https://github.com/AtomicHalifax/ChestXRay-Disease-Classification"
-
 license: MIT
-
 keywords:
-
-* Medical AI
-* Computer Vision
-* Deep Learning
-* PyTorch
-* DenseNet121
-* Chest X-ray
-* CheXpert
-* Multi-label Classification
-* Explainable AI
-* Grad-CAM
-
-abstract: >
-A Computer Vision and Medical AI project for multi-label chest X-ray
-disease classification using the Stanford CheXpert dataset.
-The project implements a DenseNet121 baseline with transfer learning,
-comprehensive evaluation, and Grad-CAM explainability.
-
-version: 1.0.0
-date-released: 2026-08-03
-
+  - medical imaging
+  - chest x-ray
+  - CheXpert
+  - multi-label classification
+  - Grad-CAM
+  - PyTorch
+version: 1.1.0
+date-released: 2026-10-01

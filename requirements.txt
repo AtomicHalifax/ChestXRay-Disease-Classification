@@ -1,12 +1,12 @@
-torch==2.11.0
-torchvision==0.26.0
-numpy==2.0.2
-pandas==2.2.2
-matplotlib==3.10.0
-scikit-learn==1.6.1
-opencv-python
+torch>=2.2
+torchvision>=0.17
+numpy
+pandas
+scikit-learn
+matplotlib
 Pillow
-tqdm
-grad-cam
+huggingface_hub
+# demo
+gradio>=4
+# notebooks
 jupyter
-notebook
