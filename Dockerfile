@@ -18,6 +18,8 @@ RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/c
 
 COPY pyproject.toml ./
 COPY src ./src
+# models/ holds small metadata (baseline metrics, optional drift reference), not weights
+COPY models ./models
 RUN pip install ".[serve]"
 
 USER app

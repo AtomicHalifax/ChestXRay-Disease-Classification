@@ -56,7 +56,7 @@ Weights: [`AtomicHalifax/ChestXRay-DenseNet121`](https://huggingface.co/AtomicHa
 ### Serve it (API + Docker)
 
 ```bash
-docker compose up --build          # API on :8000 (docs at /docs), MLflow UI on :5000
+docker compose up --build          # API :8000 (/docs), MLflow :5000, Prometheus :9090, Grafana :3000
 curl -F file=@xray.jpg localhost:8000/predict
 curl -F file=@xray.jpg -o cam.png "localhost:8000/explain?finding=Edema"
 ```
@@ -67,6 +67,7 @@ curl -F file=@xray.jpg -o cam.png "localhost:8000/explain?finding=Edema"
 | `GET /version` | API version, model version, SHA-256 of the loaded weights |
 | `POST /predict` | Five probabilities, the top finding, input-quality warnings, latency |
 | `POST /explain` | Grad-CAM overlay PNG for one finding |
+| `GET /drift` | Drift status: PSI per finding over recent predictions (`stable` / `moderate_shift` / `major_shift`) |
 | `GET /metrics` | Prometheus metrics: request counts, latency, prediction distribution (for drift monitoring) |
 
 ## MLOps
@@ -77,17 +78,25 @@ curl -F file=@xray.jpg -o cam.png "localhost:8000/explain?finding=Edema"
                                    ▼
                  Hugging Face Hub (versioned weights, SHA-256 pinned)
                                    │
- git push ──► CI: ruff + pytest ──► docker build ──► container smoke test
+ evaluate.py ──► valid_report.json ──► quality gate (vs models/baseline_metrics.json)
+             └─► valid_predictions.npz ──► drift reference (models/drift_reference.json)
+                                   │
+ git push ──► CI: ruff + pytest + gate ──► docker build ──► container smoke test
+          └─► promtool: check config + unit-test alert rules
  git tag v* ──► Release: build image (weights baked in) ──► ghcr.io/<owner>/chexpert-api
                                    │
                                    ▼
-                FastAPI service ──► /metrics ──► Prometheus / Grafana
+   FastAPI service ──► /metrics ──► Prometheus (alert rules) ──► Grafana dashboard
+                  └─► /drift (PSI of recent predictions vs validation reference)
 ```
 
 - **Data validation:** `validate_csv` checks columns, label values, duplicate paths and path layout before training starts.
 - **Experiment tracking:** `train.py --mlflow` logs every run's params, per-epoch metrics, final validation AUROCs and artifacts.
 - **Model versioning:** `MODEL_VERSION` is on every API response. Setting `CHEXPERT_WEIGHTS_SHA256` stops the service from starting if the weights file differs.
 - **Input guard:** the API warns about (or, with `CHEXPERT_STRICT_INPUT=1`, rejects) images that are colour, tiny or oddly shaped.
+- **Quality gate:** `python -m chexpert_cls.gate --candidate <report>` fails if mean AUROC drops more than 0.01, or any finding drops more than 0.03, against the committed baseline. CI runs it automatically when `models/candidate_metrics.json` is committed.
+- **Drift detection:** the API keeps the last 500 predictions and compares each finding's probability distribution with the validation set, using the Population Stability Index (PSI). It's exposed at `/drift` and as the `chexpert_drift_psi` metric. Build the reference with `python -m chexpert_cls.drift --predictions results/valid_predictions.npz`.
+- **Monitoring:** `docker compose up` also starts Prometheus (:9090) and Grafana (:3000), with a pre-built dashboard covering traffic, error ratio, p50/p95 latency, mean prediction per finding and drift. Four alert rules (API down, error rate >10%, p95 latency >2 s, PSI >0.25) are checked and unit-tested with `promtool` in CI.
 - **CI/CD:** every push runs lint, unit and API tests, builds the image and smoke-tests the container. A `v*` tag publishes the image to GHCR.
 
 A plain-language walkthrough of the whole project is in [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md).
@@ -121,11 +130,13 @@ This is a reproduction of the DenseNet121 U-Ignore baseline from the CheXpert pa
 
 ```
 src/chexpert_cls/   config, data (label policies, patient split), validation, model, train, evaluate,
-                    predict, gradcam, metrics, api (FastAPI service)
+                    predict, gradcam, metrics, gate (quality gate), drift (PSI), api (FastAPI service)
+models/             baseline_metrics.json (gate baseline); drift_reference.json once built
 app.py              Gradio demo (Hugging Face Space ready)
 tests/              pytest: labels, patient split, metrics, validation, model, Grad-CAM, API contract
 Dockerfile          CPU inference image (non-root, healthcheck, optional baked weights)
-docker-compose.yml  API + MLflow tracking server
+docker-compose.yml  API + MLflow + Prometheus + Grafana
+monitoring/         Prometheus config, alert rules + their unit tests, Grafana dashboard
 .github/workflows/  ci.yml (lint, tests, docker smoke test), release.yml (publish image to GHCR)
 notebooks/          original exploration (00) and evaluation (01) notebooks
 docs/               dataset, architecture, training, evaluation and limitations notes
