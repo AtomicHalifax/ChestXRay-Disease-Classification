@@ -87,6 +87,27 @@ def test_explain_rejects_unknown_finding(client):
     assert r.status_code == 422
 
 
+def test_drift_disabled_without_reference(client):
+    assert client.get("/drift").json()["status"] == "disabled"
+
+
+def test_drift_endpoint_and_gauge(client):
+    from chexpert_cls.api import STATE
+    from chexpert_cls.drift import DriftMonitor, build_reference
+
+    ref = build_reference(np.random.default_rng(0).beta(2, 5, (500, len(TARGET_DISEASES))))
+    STATE["drift"] = DriftMonitor(ref, window=10, min_samples=3)
+    try:
+        for _ in range(3):
+            client.post("/predict", files={"file": ("x.png", _png(), "image/png")})
+        body = client.get("/drift").json()
+        assert body["status"] in {"stable", "moderate_shift", "major_shift"}
+        assert set(body["psi"]) == set(TARGET_DISEASES)
+        assert "chexpert_drift_psi" in client.get("/metrics").text
+    finally:
+        STATE.pop("drift", None)
+
+
 def test_metrics_exposed(client):
     client.post("/predict", files={"file": ("x.png", _png(), "image/png")})
     text = client.get("/metrics").text
