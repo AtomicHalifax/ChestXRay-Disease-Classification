@@ -3,4 +3,4 @@
 from .config import IMAGENET_MEAN, IMAGENET_STD, IMAGE_SIZE, TARGET_DISEASES
 
 __all__ = ["TARGET_DISEASES", "IMAGE_SIZE", "IMAGENET_MEAN", "IMAGENET_STD"]
-__version__ = "1.3.0"
+__version__ = "1.4.0"
