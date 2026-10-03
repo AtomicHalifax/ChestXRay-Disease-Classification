@@ -50,4 +50,6 @@ def test_prometheus_scrapes_the_api_service():
     targets = [t for job in cfg["scrape_configs"] for sc in job["static_configs"] for t in sc["targets"]]
     assert "api:8000" in targets
     compose = yaml.safe_load((ROOT / "docker-compose.yml").read_text())
-    assert {"api", "prometheus", "grafana"} <= set(compose["services"])
+    assert {"api", "prometheus", "grafana", "alertmanager"} <= set(compose["services"])
+    am_targets = [t for a in cfg["alerting"]["alertmanagers"] for sc in a["static_configs"] for t in sc["targets"]]
+    assert "alertmanager:9093" in am_targets
