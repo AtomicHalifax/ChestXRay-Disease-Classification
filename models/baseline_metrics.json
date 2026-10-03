@@ -1,0 +1,13 @@
+{
+  "model_version": "densenet121-chexpert5-v1.0",
+  "source": "notebooks/01_chestxray_disease_classification.ipynb, CheXpert validation set (234 images)",
+  "note": "v1.0 checkpoint was selected on the validation set, so these numbers are optimistic. Replace after the v1.1 retrain.",
+  "mean_auroc": 0.8790,
+  "per_finding": {
+    "Atelectasis": 0.8176,
+    "Cardiomegaly": 0.8547,
+    "Consolidation": 0.8973,
+    "Edema": 0.9061,
+    "Pleural Effusion": 0.9194
+  }
+}
