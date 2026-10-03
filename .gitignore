@@ -216,3 +216,12 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# local alerting secrets / config (scripts/setup_alert_email.py)
+monitoring/alertmanager/alertmanager.local.yml
+monitoring/alertmanager/secrets/
+.env
+# downloaded sample images and private test sets
+samples/xray/
+samples/bad_inputs/
+samples/chexpert_private/
