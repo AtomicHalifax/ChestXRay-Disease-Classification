@@ -177,6 +177,28 @@ Why watch predictions instead of accuracy? In production nobody tells you the ri
 - **Grafana** shows a ready-made dashboard: traffic, error ratio, response time, average prediction per finding, and drift with warning lines at 0.1 and 0.25.
 - A Python test checks that every metric name used in the dashboard and alerts really exists in the API, so a renamed metric can't silently break monitoring.
 
+### 7.11 Checking a new dataset before trusting the model
+The drift monitor in 7.9 watches live traffic. But often the real question comes earlier: *"a new hospital sent us 5,000 X-rays; will the model work on them?"* That's what `drift_check` answers:
+
+```bash
+python -m chexpert_cls.drift_check new_images/ --out drift_report/
+```
+
+It runs the model on every image in the folder and reports three things:
+1. **Input quality:** how many images look wrong (colour, tiny, odd shape).
+2. **Prediction drift:** PSI per finding, compared with the validation reference. A big shift means "these images are different from what the model was tested on".
+3. **External validation (if labels exist):** AUROC per finding with confidence intervals. This is the honest answer to "how good is the model on this data?". It reads a simple labels CSV, or the NIH ChestX-ray14 label file directly.
+
+Notebook 02 runs this on **NIH ChestX-ray14**, a different hospital with a different labeller. Expect the AUROC to drop compared with CheXpert. That drop is normal, and reporting it is what separates a careful ML engineer from someone quoting one number.
+
+### 7.12 Getting notified
+Prometheus decides **when** an alert fires. **Alertmanager** decides **who hears about it**:
+- It groups alerts, so you get one email about drift instead of five, one per finding.
+- It mutes follow-on alerts: if the API is down, it won't also email about errors and latency.
+- It re-sends every 4 hours while a problem continues, and sends a "resolved" email when it's fixed.
+
+Out of the box it only shows alerts on its web page (:9093). Run `python scripts/setup_alert_email.py` once (with a Gmail app password) and it emails you. `make test-alert` sends a fake alert so you can check the whole chain works. The email settings stay on your computer and are never committed.
+
 ## 8. Limitations (know these well)
 
 1. **One hospital only.** It might not work as well on X-rays from other hospitals, scanners or countries. The next step is testing on another dataset (MIMIC-CXR or NIH).
