@@ -151,6 +151,32 @@ The `Dockerfile` packages Python, CPU-only PyTorch, the code and (optionally) th
 
 ---
 
+### 7.8 Quality gate: never ship a worse model
+`models/baseline_metrics.json` holds the scores of the model currently in use. When you train a new model, `evaluate.py` writes its scores to `valid_report.json`, and the gate compares the two:
+- if the **mean AUROC** drops by more than **0.01**, it fails;
+- if **any single finding** drops by more than **0.03**, it fails, even if the mean went up.
+
+Why both rules? A new model can look better on average while getting much worse at one disease. Missing one disease is exactly the kind of mistake that matters in medicine.
+
+In CI, commit the new report as `models/candidate_metrics.json` and the pipeline runs the gate automatically. A failed gate means a red pipeline, so the model doesn't get promoted.
+
+### 7.9 Drift detection (PSI)
+During validation we record how the model's probabilities are spread out for each finding: for example, "most Edema scores are below 0.2". That's the **reference**. In production, the API keeps the last 500 predictions and compares their spread with the reference using the **Population Stability Index (PSI)**:
+- PSI below 0.1 means **stable**;
+- 0.1 to 0.25 means a **moderate shift**, so keep an eye on it;
+- above 0.25 means a **major shift**: the incoming images are probably different (a new hospital, new scanner, or the wrong kind of image).
+
+You can see it at `/drift`, and it feeds into Prometheus as `chexpert_drift_psi`.
+
+Why watch predictions instead of accuracy? In production nobody tells you the right answer straight away, so accuracy can't be measured live. A change in what the model predicts is the earliest warning you get.
+
+### 7.10 Prometheus, alerts and Grafana
+`docker compose up` starts the full monitoring stack:
+- **Prometheus** collects the `/metrics` numbers every 15 seconds and checks four **alert rules**: the API is down, more than 10% of requests fail, predictions slower than 2 seconds (95th percentile), and drift above 0.25.
+- The alert rules have their own **unit tests** (`alerts_test.yml`). CI feeds them fake data, such as "drift stays at 0.30 for 20 minutes", and checks that the right alert fires. It also checks that alerts don't fire too early.
+- **Grafana** shows a ready-made dashboard: traffic, error ratio, response time, average prediction per finding, and drift with warning lines at 0.1 and 0.25.
+- A Python test checks that every metric name used in the dashboard and alerts really exists in the API, so a renamed metric can't silently break monitoring.
+
 ## 8. Limitations (know these well)
 
 1. **One hospital only.** It might not work as well on X-rays from other hospitals, scanners or countries. The next step is testing on another dataset (MIMIC-CXR or NIH).
