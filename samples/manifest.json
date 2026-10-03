@@ -1,0 +1,105 @@
+{
+  "description": "10 openly licensed chest X-rays from Wikimedia Commons for demos and manual testing. 'expected' is the finding described by the uploader, not a radiologist-verified label; these are NOT a benchmark.",
+  "images": [
+    {
+      "id": "normal_pa_1",
+      "title": "Normal posteroanterior (PA) chest radiograph (X-ray).jpg",
+      "expected": "No Finding",
+      "license": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "author": "Mikael Häggström",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Normal_posteroanterior_(PA)_chest_radiograph_(X-ray).jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Normal_posteroanterior_%28PA%29_chest_radiograph_%28X-ray%29.jpg"
+    },
+    {
+      "id": "normal_pa_2",
+      "title": "Chest Xray PA 3-8-2010.png",
+      "expected": "No Finding",
+      "license": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "author": "Stillwaterising",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Chest_Xray_PA_3-8-2010.png",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c8/Chest_Xray_PA_3-8-2010.png"
+    },
+    {
+      "id": "effusion_left",
+      "title": "Effusionhalf.PNG",
+      "expected": "Pleural Effusion",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "author": "James Heilman, MD",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Effusionhalf.PNG",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/30/Effusionhalf.PNG"
+    },
+    {
+      "id": "effusion_bilateral_ap",
+      "title": "6077 lores.jpg",
+      "expected": "Pleural Effusion",
+      "license": "Public domain",
+      "license_url": null,
+      "author": "CDC / D. Loren Ketai, M.D.",
+      "source_page": "https://commons.wikimedia.org/wiki/File:6077_lores.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/a/ae/6077_lores.jpg"
+    },
+    {
+      "id": "heart_failure",
+      "title": "Chest radiograph of a lung with Kerley B lines.jpg",
+      "expected": "Cardiomegaly; Edema; Pleural Effusion",
+      "license": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "author": "Mikael Häggström",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Chest_radiograph_of_a_lung_with_Kerley_B_lines.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Chest_radiograph_of_a_lung_with_Kerley_B_lines.jpg"
+    },
+    {
+      "id": "edema_neurogenic",
+      "title": "Neurogenic Pulmonary Edema.jpg",
+      "expected": "Edema",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "author": "Moustafa A. Mansour",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Neurogenic_Pulmonary_Edema.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/c/c2/Neurogenic_Pulmonary_Edema.jpg"
+    },
+    {
+      "id": "edema_hape",
+      "title": "Chest XR of HAPE.png",
+      "expected": "Edema",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "author": "Maryrosegrant",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Chest_XR_of_HAPE.png",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/7/79/Chest_XR_of_HAPE.png"
+    },
+    {
+      "id": "atelectasis_lul",
+      "title": "Oberlappenatelektase links pa.jpg",
+      "expected": "Atelectasis",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "author": "Hellerhoff",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Oberlappenatelektase_links_pa.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/2/2d/Oberlappenatelektase_links_pa.jpg"
+    },
+    {
+      "id": "consolidation_rml",
+      "title": "X-ray of lobar pneumonia.jpg",
+      "expected": "Consolidation",
+      "license": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "author": "Mikael Häggström",
+      "source_page": "https://commons.wikimedia.org/wiki/File:X-ray_of_lobar_pneumonia.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/5/51/X-ray_of_lobar_pneumonia.jpg"
+    },
+    {
+      "id": "consolidation_ap",
+      "title": "Pneumonia x ray.jpg",
+      "expected": "Consolidation",
+      "license": "Public domain",
+      "license_url": null,
+      "author": "Unknown (public domain)",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Pneumonia_x_ray.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/0/01/Pneumonia_x_ray.jpg"
+    }
+  ]
+}
