@@ -99,7 +99,20 @@ curl -F file=@xray.jpg -o cam.png "localhost:8000/explain?finding=Edema"
 - **Monitoring:** `docker compose up` also starts Prometheus (:9090) and Grafana (:3000), with a pre-built dashboard covering traffic, error ratio, p50/p95 latency, mean prediction per finding and drift. Four alert rules (API down, error rate >10%, p95 latency >2 s, PSI >0.25) are checked and unit-tested with `promtool` in CI.
 - **CI/CD:** every push runs lint, unit and API tests, builds the image and smoke-tests the container. A `v*` tag publishes the image to GHCR.
 
+- **Batch drift check + external validation:** before trusting the model on a new dataset, run `python -m chexpert_cls.drift_check new_images/`. It reports input-quality problems, PSI drift per finding, and, given labels (a generic CSV or NIH ChestX-ray14 format), AUROC with 95% CIs on that dataset. `--fail-on-shift` makes it exit non-zero on a major shift.
+- **Alert notifications:** Alertmanager (:9093) receives the Prometheus alerts. By default it only shows them. Run `python scripts/setup_alert_email.py` once to get emails (Gmail app password supported), then `make test-alert` to check end to end. CI validates both the default and the generated email config with `amtool`.
+
 A plain-language walkthrough of the whole project is in [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md).
+
+### Try it with sample images
+
+```bash
+make samples          # 10 openly licensed chest X-rays (Wikimedia Commons) + 4 deliberately bad inputs
+python -m chexpert_cls.drift_check samples/xray/
+for f in samples/xray/*.png samples/bad_inputs/*; do curl -s -F file=@$f localhost:8000/predict; echo; done
+```
+
+Credits and licences are in `samples/manifest.json`. The "expected" findings come from the uploaders' descriptions; they are not verified labels. To compare against real radiologist labels, `scripts/make_test_set.py` copies a small labelled set out of *your own* CheXpert download (research licence: keep it private).
 
 ### Reproduce training and evaluation
 
@@ -109,6 +122,8 @@ Get **CheXpert-v1.0-small** from [Stanford AIMI](https://aimi.stanford.edu/datas
 python -m chexpert_cls.train    --data-root data/CheXpert-v1.0-small --epochs 10 --policy ignore --pos-weight
 python -m chexpert_cls.evaluate --data-root data/CheXpert-v1.0-small --weights runs/densenet121/best.pth
 ```
+
+Or run everything on Colab with [`notebooks/02_retrain_and_external_validation.ipynb`](notebooks/02_retrain_and_external_validation.ipynb): retrain with MLflow tracking, evaluate, quality gate, build the drift reference, and test on NIH ChestX-ray14.
 
 ---
 
@@ -130,22 +145,25 @@ This is a reproduction of the DenseNet121 U-Ignore baseline from the CheXpert pa
 
 ```
 src/chexpert_cls/   config, data (label policies, patient split), validation, model, train, evaluate,
-                    predict, gradcam, metrics, gate (quality gate), drift (PSI), api (FastAPI service)
+                    predict, gradcam, metrics, gate (quality gate), drift (PSI), drift_check (batch drift +
+                    external validation), api (FastAPI service)
 models/             baseline_metrics.json (gate baseline); drift_reference.json once built
 app.py              Gradio demo (Hugging Face Space ready)
 tests/              pytest: labels, patient split, metrics, validation, model, Grad-CAM, API contract
 Dockerfile          CPU inference image (non-root, healthcheck, optional baked weights)
-docker-compose.yml  API + MLflow + Prometheus + Grafana
-monitoring/         Prometheus config, alert rules + their unit tests, Grafana dashboard
+docker-compose.yml  API + MLflow + Prometheus + Alertmanager + Grafana
+monitoring/         Prometheus config, alert rules + their unit tests, Alertmanager, Grafana dashboard
+scripts/            fetch_samples, make_test_set, setup_alert_email, send_test_alert
+samples/            manifest.json of demo images (images themselves are downloaded, not committed)
 .github/workflows/  ci.yml (lint, tests, docker smoke test), release.yml (publish image to GHCR)
-notebooks/          original exploration (00) and evaluation (01) notebooks
+notebooks/          original exploration (00) and evaluation (01); 02 = Colab retrain + external validation
 docs/               dataset, architecture, training, evaluation and limitations notes
 images/             evaluation figures
 ```
 
 ## Limitations
 
-- Trained and evaluated only on CheXpert: a single hospital, mostly adult inpatients, many AP portable films. No external validation (e.g. MIMIC-CXR, NIH ChestX-ray14) yet.
+- Trained and evaluated only on CheXpert: a single hospital, mostly adult inpatients, many AP portable films. External validation on NIH ChestX-ray14 is set up (notebook 02) but has not been run yet.
 - The training labels come from an NLP labeller run on radiology reports, so they're noisy. The validation set is small (234 images).
 - Grad-CAM shows where the model's evidence is. It doesn't show that the model is right, and it can highlight support devices or text markers.
 - A threshold of 0.5 is arbitrary. Operating points should be tuned per finding on held-out data.
@@ -156,7 +174,7 @@ More detail is in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
 
 - [ ] Retrain with v1.1 protocol and report CIs
 - [ ] U-Ones vs U-Ignore ablation, 320 px input
-- [ ] External test on a MIMIC-CXR subset
+- [ ] Run notebook 02: v1.1 retrain + NIH ChestX-ray14 external validation
 - [ ] Per-finding calibration (temperature scaling) and operating points
 
 ## References

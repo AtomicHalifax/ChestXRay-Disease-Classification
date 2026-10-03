@@ -4,6 +4,7 @@
 #   MLflow:     http://localhost:5000
 #   Prometheus: http://localhost:9090   (Alerts tab shows the rules)
 #   Grafana:    http://localhost:3000   (dashboard "CheXpert API", no login needed)
+#   Alertmanager: http://localhost:9093 (email: python scripts/setup_alert_email.py)
 # Train against the tracking server from the host:
 #   MLFLOW_TRACKING_URI=http://localhost:5000 python -m chexpert_cls.train --data-root ... --mlflow
 services:
@@ -27,7 +28,14 @@ services:
     volumes:
       - ./monitoring/prometheus:/etc/prometheus:ro
     ports: ["9090:9090"]
-    depends_on: [api]
+    depends_on: [api, alertmanager]
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    command: ["--config.file=/etc/alertmanager/${ALERTMANAGER_CONFIG:-alertmanager.yml}"]
+    volumes:
+      - ./monitoring/alertmanager:/etc/alertmanager:ro
+    ports: ["9093:9093"]
 
   grafana:
     image: grafana/grafana:latest

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chexpert-cls"
-version = "1.3.0"
+version = "1.4.0"
 description = "Multi-label chest X-ray classification on CheXpert with DenseNet121 and Grad-CAM"
 authors = [{ name = "Athrva Raval" }]
 license = { text = "MIT" }
