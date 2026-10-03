@@ -69,6 +69,12 @@ def main(argv=None) -> None:
     np.savez(args.out / "valid_predictions.npz", y=y, p=p)
     (args.out / "summary.json").write_text(json.dumps(
         {"mean_auroc": float(table["auroc"].mean()), "n_images": int(len(y))}, indent=2))
+    # Same format as train.py's report, so it can be fed to the quality gate.
+    report = {r.disease: {"auroc": r.auroc, "ci95": [r.ci95_low, r.ci95_high]} for r in table.itertuples()}
+    report["mean_auroc"] = float(table["auroc"].mean())
+    (args.out / "valid_report.json").write_text(json.dumps(report, indent=2))
+    print(f"\nNext: python -m chexpert_cls.gate --candidate {args.out / 'valid_report.json'}")
+    print(f"      python -m chexpert_cls.drift --predictions {args.out / 'valid_predictions.npz'}")
 
 
 if __name__ == "__main__":

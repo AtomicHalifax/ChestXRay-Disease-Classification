@@ -8,6 +8,9 @@ Environment variables
   CHEXPERT_RANDOM_WEIGHTS   "1" = random weights, for tests / smoke checks only
   CHEXPERT_STRICT_INPUT     "1" = reject (422) images that fail the OOD checks
   CHEXPERT_MAX_UPLOAD_MB    upload size limit (default 10)
+  CHEXPERT_DRIFT_REFERENCE  drift reference JSON (default models/drift_reference.json;
+                            drift monitoring is off if the file does not exist)
+  CHEXPERT_DRIFT_WINDOW     number of recent predictions compared (default 500)
 """
 
 from __future__ import annotations
@@ -25,10 +28,11 @@ from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from PIL import Image, UnidentifiedImageError
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 
 from . import __version__
 from .config import MODEL_VERSION, TARGET_DISEASES
+from .drift import DriftMonitor
 from .model import build_model, load_model, resolve_weights
 from .predict import gradcam_image, predict_image
 from .validation import image_warnings
@@ -38,6 +42,7 @@ LATENCY = Histogram("chexpert_latency_seconds", "Inference latency", ["endpoint"
 # Prediction-distribution histograms: the raw signal for drift monitoring.
 PROBS = Histogram("chexpert_probability", "Predicted probability", ["finding"],
                   buckets=[i / 10 for i in range(1, 11)])
+DRIFT = Gauge("chexpert_drift_psi", "PSI of recent predictions vs validation reference", ["finding"])
 
 STATE: dict = {}
 
@@ -64,9 +69,16 @@ def _load() -> None:
     STATE.update(model=load_model(path, device), sha256=digest, device=device)
 
 
+def _load_drift() -> None:
+    ref = Path(os.getenv("CHEXPERT_DRIFT_REFERENCE", "models/drift_reference.json"))
+    if ref.exists():
+        STATE["drift"] = DriftMonitor.from_file(ref, window=int(os.getenv("CHEXPERT_DRIFT_WINDOW", "500")))
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     _load()
+    _load_drift()
     yield
     STATE.clear()
 
@@ -112,6 +124,11 @@ def predict(file: UploadFile = File(...)):
         raise
     for k, v in probs.items():
         PROBS.labels(k).observe(v)
+    monitor = STATE.get("drift")
+    if monitor is not None:
+        monitor.add(probs)
+        for k, v in (monitor.scores() or {}).items():
+            DRIFT.labels(k).set(v)
     dt = time.perf_counter() - t0
     LATENCY.labels("predict").observe(dt)
     REQUESTS.labels("predict", "200").inc()
@@ -144,6 +161,14 @@ def explain(file: UploadFile = File(...), finding: str | None = Query(None)):
     LATENCY.labels("explain").observe(time.perf_counter() - t0)
     REQUESTS.labels("explain", "200").inc()
     return Response(buf.getvalue(), media_type="image/png", headers={"X-Finding": finding})
+
+
+@app.get("/drift")
+def drift():
+    monitor = STATE.get("drift")
+    if monitor is None:
+        return {"status": "disabled", "reason": "no drift reference loaded"}
+    return monitor.status()
 
 
 @app.get("/metrics")
