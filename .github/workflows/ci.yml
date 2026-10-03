@@ -6,10 +6,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
@@ -21,12 +21,32 @@ jobs:
         run: ruff check src tests app.py
       - name: Test
         run: pytest -q
+      - name: Model quality gate
+        # Commit a new model's report as models/candidate_metrics.json to have CI
+        # compare it against models/baseline_metrics.json before it can be promoted.
+        if: hashFiles('models/candidate_metrics.json') != ''
+        run: python -m chexpert_cls.gate --candidate models/candidate_metrics.json --summary "$GITHUB_STEP_SUMMARY"
+
+  monitoring:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate Prometheus config and alert rules
+        run: |
+          docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus" --entrypoint promtool \
+            prom/prometheus:latest check config /etc/prometheus/prometheus.yml
+      - name: Unit-test alert rules
+        run: |
+          docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus" -w /etc/prometheus --entrypoint promtool \
+            prom/prometheus:latest test rules alerts_test.yml
+      - name: Validate Grafana dashboard JSON
+        run: python3 -c "import json; json.load(open('monitoring/grafana/dashboards/chexpert.json'))"
 
   docker:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build image
         run: docker build -t chexpert-api:ci .
       - name: Smoke test container
@@ -34,6 +54,7 @@ jobs:
           docker run -d --name api -p 8000:8000 -e CHEXPERT_RANDOM_WEIGHTS=1 chexpert-api:ci
           for i in $(seq 1 30); do curl -sf localhost:8000/health && break; sleep 2; done
           curl -sf localhost:8000/version
+          curl -sf localhost:8000/drift
           docker run --rm --user root -v "$PWD:/w" chexpert-api:ci python -c "from PIL import Image; Image.new('L',(320,320),128).save('/w/x.png')"
           curl -sf -F file=@x.png localhost:8000/predict
           curl -sf -F file=@x.png -o cam.png "localhost:8000/explain?finding=Edema"
