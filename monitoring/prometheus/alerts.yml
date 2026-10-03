@@ -1,0 +1,40 @@
+groups:
+  - name: chexpert-api
+    rules:
+      - alert: ChexpertApiDown
+        expr: up{job="chexpert-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CheXpert API is not responding to Prometheus scrapes"
+
+      - alert: ChexpertHighErrorRate
+        expr: |
+          sum(rate(chexpert_requests_total{status!="200"}[5m]))
+            / clamp_min(sum(rate(chexpert_requests_total[5m])), 1e-9) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "More than 10% of requests are failing"
+          description: "Check /metrics by status code; 415/422 usually means bad uploads, 5xx means a server bug."
+
+      - alert: ChexpertSlowPredictions
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(chexpert_latency_seconds_bucket{endpoint="predict"}[5m]))) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "95th percentile /predict latency above 2 s"
+
+      - alert: ChexpertPredictionDrift
+        expr: max by (finding) (chexpert_drift_psi) > 0.25
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prediction drift on {{ $labels.finding }} (PSI {{ $value | printf \"%.2f\" }})"
+          description: "Recent predictions differ strongly from the validation reference. Check the incoming images; consider re-evaluation or retraining."

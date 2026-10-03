@@ -1,0 +1,41 @@
+# Unit tests for the alert rules:  promtool test rules alerts_test.yml
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'chexpert_drift_psi{finding="Edema"}'
+        values: '0.30x30'
+      - series: 'chexpert_drift_psi{finding="Cardiomegaly"}'
+        values: '0.05x30'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ChexpertPredictionDrift
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: ChexpertPredictionDrift
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              finding: Edema
+            exp_annotations:
+              summary: "Prediction drift on Edema (PSI 0.30)"
+              description: "Recent predictions differ strongly from the validation reference. Check the incoming images; consider re-evaluation or retraining."
+
+  - interval: 1m
+    input_series:
+      - series: 'up{job="chexpert-api", instance="api:8000"}'
+        values: '1 1 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ChexpertApiDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: chexpert-api
+              instance: api:8000
+            exp_annotations:
+              summary: "CheXpert API is not responding to Prometheus scrapes"
