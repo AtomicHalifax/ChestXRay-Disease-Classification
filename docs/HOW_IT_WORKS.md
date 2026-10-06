@@ -191,14 +191,6 @@ It runs the model on every image in the folder and reports three things:
 
 Notebook 02 runs this on **NIH ChestX-ray14**, a different hospital with a different labeller. Expect the AUROC to drop compared with CheXpert. That drop is normal, and reporting it is what separates a careful ML engineer from someone quoting one number.
 
-### 7.12 Getting notified
-Prometheus decides **when** an alert fires. **Alertmanager** decides **who hears about it**:
-- It groups alerts, so you get one email about drift instead of five, one per finding.
-- It mutes follow-on alerts: if the API is down, it won't also email about errors and latency.
-- It re-sends every 4 hours while a problem continues, and sends a "resolved" email when it's fixed.
-
-Out of the box it only shows alerts on its web page (:9093). Run `python scripts/setup_alert_email.py` once (with a Gmail app password) and it emails you. `make test-alert` sends a fake alert so you can check the whole chain works. The email settings stay on your computer and are never committed.
-
 ## 8. Limitations (know these well)
 
 1. **One hospital only.** It might not work as well on X-rays from other hospitals, scanners or countries. The next step is testing on another dataset (MIMIC-CXR or NIH).
