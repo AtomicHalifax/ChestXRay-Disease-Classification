@@ -100,7 +100,6 @@ curl -F file=@xray.jpg -o cam.png "localhost:8000/explain?finding=Edema"
 - **CI/CD:** every push runs lint, unit and API tests, builds the image and smoke-tests the container. A `v*` tag publishes the image to GHCR.
 
 - **Batch drift check + external validation:** before trusting the model on a new dataset, run `python -m chexpert_cls.drift_check new_images/`. It reports input-quality problems, PSI drift per finding, and, given labels (a generic CSV or NIH ChestX-ray14 format), AUROC with 95% CIs on that dataset. `--fail-on-shift` makes it exit non-zero on a major shift.
-- **Alert notifications:** Alertmanager (:9093) receives the Prometheus alerts. By default it only shows them. Run `python scripts/setup_alert_email.py` once to get emails (Gmail app password supported), then `make test-alert` to check end to end. CI validates both the default and the generated email config with `amtool`.
 
 A plain-language walkthrough of the whole project is in [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md).
 
@@ -151,9 +150,9 @@ models/             baseline_metrics.json (gate baseline); drift_reference.json 
 app.py              Gradio demo (Hugging Face Space ready)
 tests/              pytest: labels, patient split, metrics, validation, model, Grad-CAM, API contract
 Dockerfile          CPU inference image (non-root, healthcheck, optional baked weights)
-docker-compose.yml  API + MLflow + Prometheus + Alertmanager + Grafana
-monitoring/         Prometheus config, alert rules + their unit tests, Alertmanager, Grafana dashboard
-scripts/            fetch_samples, make_test_set, setup_alert_email, send_test_alert
+docker-compose.yml  API + MLflow + Prometheus + Grafana
+monitoring/         Prometheus config, alert rules + their unit tests, Grafana dashboard
+scripts/            fetch_samples, make_test_set
 samples/            manifest.json of demo images (images themselves are downloaded, not committed)
 .github/workflows/  ci.yml (lint, tests, docker smoke test), release.yml (publish image to GHCR)
 notebooks/          original exploration (00) and evaluation (01); 02 = Colab retrain + external validation

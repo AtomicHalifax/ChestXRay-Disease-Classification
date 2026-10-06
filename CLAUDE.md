@@ -25,13 +25,11 @@ src/chexpert_cls/  config (findings, MODEL_VERSION), data (label policies, patie
 app.py             Gradio demo (local only)
 tests/             pytest; torch/fastapi tests use importorskip and CHEXPERT_RANDOM_WEIGHTS=1
 models/            baseline_metrics.json (gate baseline); drift_reference.json (not built yet; needs real eval)
-monitoring/        prometheus.yml, alerts.yml, alerts_test.yml (promtool unit tests), alertmanager/ (default = no-op receiver;
-                   scripts/setup_alert_email.py writes git-ignored alertmanager.local.yml + secrets + .env), Grafana
-scripts/           fetch_samples.py (10 Wikimedia CXRs + bad inputs), make_test_set.py (private CheXpert subset),
-                   setup_alert_email.py, send_test_alert.sh
+monitoring/        prometheus.yml, alerts.yml, alerts_test.yml (promtool unit tests), Grafana provisioning + dashboard
+scripts/           fetch_samples.py (10 Wikimedia CXRs + bad inputs), make_test_set.py (private CheXpert subset)
 samples/           manifest.json only; downloaded images are git-ignored
 Dockerfile         CPU torch, non-root, healthcheck, ARG BAKE_WEIGHTS=1 bakes weights in
-docker-compose.yml api :8000, mlflow :5000, prometheus :9090, alertmanager :9093, grafana :3000
+docker-compose.yml api :8000, mlflow :5000, prometheus :9090, grafana :3000
 .github/workflows  ci.yml (test: ruff+pytest+gate | monitoring: promtool | docker: build + container smoke test)
                    release.yml (tag v* → ghcr.io/<owner>/chexpert-api)
 docs/HOW_IT_WORKS.md  plain-language walkthrough for the owner's interview prep
@@ -79,9 +77,9 @@ python -m chexpert_cls.drift --predictions results/valid_predictions.npz
 
 ## Status (v1.4)
 
-Done and green in CI: package, tests, API (`/health /version /predict /explain /drift /metrics`), input guard, CSV validation, MLflow hooks, SHA-256 weight pinning, Docker + smoke test, quality gate, PSI drift monitor, batch drift check / external validation, Prometheus alerts with unit tests, Alertmanager (amtool-checked), Grafana dashboard, release workflow.
+Done and green in CI: package, tests, API (`/health /version /predict /explain /drift /metrics`), input guard, CSV validation, MLflow hooks, SHA-256 weight pinning, Docker + smoke test, quality gate, PSI drift monitor, batch drift check / external validation, Prometheus alert rules with unit tests (visible in the Prometheus UI; no notifications — Alertmanager/email was removed because there's no real traffic), Grafana dashboard, release workflow (v1.4.0 published, GHCR image built).
 
-Written but never run with real data or weights: notebook 02 (MLflow, real CSV validation, gate on real metrics, drift reference, NIH external validation), the API with real weights, email delivery, fetch_samples.py downloads.
+Written but never run with real data or weights: notebook 02 (MLflow, real CSV validation, gate on real metrics, drift reference, NIH external validation), the API with real weights, fetch_samples.py downloads.
 
 Next:
 1. Owner runs `docker compose up` locally with real weights and records the SHA-256.

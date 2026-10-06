@@ -1,4 +1,4 @@
-.PHONY: install test lint serve docker docker-run up samples test-alert
+.PHONY: install test lint serve docker docker-run up samples
 
 install:
 	pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
@@ -24,6 +24,3 @@ up:
 
 samples:
 	python scripts/fetch_samples.py
-
-test-alert:
-	sh scripts/send_test_alert.sh
