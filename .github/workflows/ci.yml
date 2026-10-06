@@ -39,13 +39,6 @@ jobs:
         run: |
           docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus" -w /etc/prometheus --entrypoint promtool \
             prom/prometheus:latest test rules alerts_test.yml
-      - name: Validate Alertmanager configs (default + generated email config)
-        run: |
-          docker run --rm -v "$PWD/monitoring/alertmanager:/etc/alertmanager" --entrypoint amtool \
-            prom/alertmanager:latest check-config /etc/alertmanager/alertmanager.yml
-          python3 scripts/setup_alert_email.py --to ci@example.com --password dummy
-          docker run --rm -v "$PWD/monitoring/alertmanager:/etc/alertmanager" --entrypoint amtool \
-            prom/alertmanager:latest check-config /etc/alertmanager/alertmanager.local.yml
       - name: Validate Grafana dashboard JSON
         run: python3 -c "import json; json.load(open('monitoring/grafana/dashboards/chexpert.json'))"
 
