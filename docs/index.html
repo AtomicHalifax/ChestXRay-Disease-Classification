@@ -7,7 +7,7 @@
 <meta name="description" content="A DenseNet121 trained on 159,329 chest X-rays, running entirely in your browser. Drop a film, get findings and a Grad-CAM heatmap. Research demo by Athrva Raval.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#0f172a;--muted:#475569;--soft:#64748b;--line:#e5e7eb;--bg:#ffffff;--tint:#f8fafc;--accent:#2563eb;--accent2:#0ea5e9;--warn:#b45309;--r:18px}
 *{box-sizing:border-box;margin:0}
@@ -49,11 +49,6 @@ h1{font-size:clamp(46px,8vw,92px);line-height:1;letter-spacing:-.02em;max-width:
 h1 em{color:var(--accent)}
 .lead{max-width:600px;margin:24px auto 34px;font-size:19px;color:var(--muted)}
 .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);margin-top:64px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.stat{padding:26px 20px;text-align:left;border-right:1px solid var(--line)}
-.stat:last-child{border-right:0}
-.stat b{display:block;font:500 clamp(28px,4vw,40px)/1.1 "JetBrains Mono",monospace;letter-spacing:-.03em}
-.stat span{display:block;margin-top:8px;font-size:14px;color:var(--muted)}
 .honest{margin:16px auto 0;max-width:760px;font-size:13.5px;color:var(--soft)}
 
 /* ---------- logo loop ---------- */
@@ -98,8 +93,6 @@ h2{font-size:clamp(34px,5vw,52px);line-height:1.08;letter-spacing:-.015em;max-wi
 .fbar .fill{display:block;height:100%;width:0;border-radius:9px;background:#94a3b8;transition:width .7s cubic-bezier(.2,.8,.2,1)}
 .fbar.sel{font-weight:600}.fbar.sel .fill{background:linear-gradient(90deg,var(--accent),var(--accent2))}
 .fbar b{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
-.spin{display:inline-block;width:14px;height:14px;border:2px solid #cbd5e1;border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:8px}
-@keyframes sp{to{transform:rotate(360deg)}}
 
 /* ---------- pipeline ---------- */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:44px;counter-reset:s}
@@ -115,7 +108,6 @@ footer ul{margin-top:10px;padding-left:18px;font-size:13px}
 
 @media (max-width:860px){
   .demo,.steps{grid-template-columns:1fr}
-  .stats{grid-template-columns:1fr 1fr}.stat:nth-child(2){border-right:0}.stat:nth-child(-n+2){border-bottom:1px solid var(--line)}
   .navlinks{display:none}.tray{grid-template-columns:repeat(4,1fr)}
   .fbar{grid-template-columns:112px 1fr 42px}
 }
@@ -129,6 +121,62 @@ body{padding-bottom:96px}
 .dock a::before{content:attr(data-t);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translate(-50%,4px);opacity:0;pointer-events:none;white-space:nowrap;font:500 12px Inter,sans-serif;color:var(--ink);background:#f1f5f9;border:1px solid var(--line);border-radius:6px;padding:2px 8px;transition:opacity .15s,transform .15s}
 .dock a:hover::before,.dock a:focus-visible::before{opacity:1;transform:translate(-50%,0)}
 @media (max-width:860px){.dock{gap:8px;height:52px;padding:0 10px 8px}.dock a{width:36px;height:36px}}
+/* ---------- cloud-shader hero ---------- */
+.sky{position:relative;overflow:hidden;background:linear-gradient(#a9c8ea,#eaf3fc 70%,#fff)}
+#clouds{position:absolute;inset:0;width:100%;height:100%;display:block}
+.sky>.wrap{position:relative;z-index:1}
+.sky .hero{padding-bottom:96px}
+.sky .eyebrow{background:rgba(255,255,255,.75)}
+.sky .lead{color:#334155}
+
+/* ---------- numbers: split-flap stats board ---------- */
+#numbers{text-align:center}
+#numbers .board{display:inline-grid;margin-top:40px;--tw:clamp(11px,calc((100vw - 150px)/20),34px)}
+@media (max-width:639px){#numbers .board{--tw:calc((100vw - 110px)/12)}#numbers .tile.small{font-size:calc(var(--tw)*.5)}}
+#numbers .tile{width:var(--tw);font-size:calc(var(--tw)*.68)}
+#numbers .honest{margin-top:22px}
+
+/* ---------- FAQ: grouped accordion, dashed dividers ---------- */
+#faq{background:var(--tint);border-top:1px solid var(--line)}
+.faq{display:grid;grid-template-columns:220px 1fr;gap:0 40px;margin-top:40px}
+.faq h3{grid-column:1;font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--soft);padding-top:22px;border-top:1px dashed #cbd5e1}
+.faq .qs{grid-column:2;border-top:1px dashed #cbd5e1}
+.faq details{border-bottom:1px dashed #cbd5e1}
+.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:16px;padding:20px 0;font-weight:600;font-size:16.5px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font:400 22px/1 Inter,sans-serif;color:var(--soft);transition:transform .2s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{color:var(--muted);padding:0 0 20px;max-width:640px}
+@media (max-width:860px){.faq{grid-template-columns:1fr}.faq h3,.faq .qs{grid-column:1}.faq h3{padding:28px 0 8px}}
+
+/* ---------- masked heading: an X-ray shows through the letters (CSS take on React Bits MaskedHeading) ---------- */
+.masked{--mx:0px;--my:0px;color:transparent;-webkit-background-clip:text;background-clip:text;
+  background-image:linear-gradient(rgba(15,23,42,.38),rgba(15,23,42,.38)),url(samples/heart_failure.jpg);
+  background-size:cover,125% auto;background-position:center,calc(50% + var(--mx)) calc(40% + var(--my));
+  font:800 clamp(40px,7vw,76px)/1.04 Inter,sans-serif;letter-spacing:-.035em;clip-path:inset(0 100% 0 0)}
+.masked.in{animation:wipe 1.1s cubic-bezier(.65,0,.35,1) forwards}
+@keyframes wipe{to{clip-path:inset(0 0 0 0)}}
+
+/* ---------- thought line: live trace of what the model is doing (CSS take on React Bits ThoughtLine) ---------- */
+.tl{display:none;flex-direction:column;align-items:flex-start;font-weight:500;color:var(--ink)}
+.tl.on{display:inline-flex}
+.tl-head{display:inline-flex;align-items:center;gap:.4em;border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer}
+.tl-glyph{width:1.1em;height:1.1em;color:var(--accent);animation:breath 1.6s cubic-bezier(.77,0,.175,1) infinite}
+.tl:not(.working) .tl-glyph{animation:none;opacity:.55}
+@keyframes breath{50%{opacity:.55}}
+.tl.working .tl-label{background:linear-gradient(100deg,#94a3b8 30%,var(--ink) 50%,#94a3b8 70%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 1.8s linear infinite}
+@keyframes sheen{from{background-position:125% 0}to{background-position:-125% 0}}
+.tl-timer{font-variant-numeric:tabular-nums;color:var(--soft)}
+.tl-chev{color:var(--soft);transition:transform .2s}
+.tl.open .tl-chev{transform:rotate(180deg)}
+.tl-steps{list-style:none;padding:0 0 0 1.6em;margin:0;display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s cubic-bezier(.23,1,.32,1);font-size:14px;font-weight:400;color:var(--muted)}
+.tl.open .tl-steps{grid-template-rows:1fr}
+.tl-steps>div{overflow:hidden}
+.tl-steps li{display:flex;align-items:center;gap:.5em;padding-top:.45em}
+.tl-steps li i{width:.45em;height:.45em;border-radius:50%;background:var(--accent);animation:breath 1.6s infinite}
+.tl-steps li.done{opacity:.6}.tl-steps li.done i{width:auto;height:auto;background:none;animation:none;font-style:normal;color:#16a34a}
+.tl-steps li.done i::before{content:"✓"}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -143,32 +191,37 @@ body{padding-bottom:96px}
   </div>
 </div>
 
-<header class="wrap">
+<header class="sky">
+<canvas id="clouds" aria-hidden="true"></canvas>
+<div class="wrap">
   <nav>
     <a class="logo" href="#"><i></i>CXR Reader</a>
-    <div class="navlinks"><a href="#demo">Demo</a><a href="#how">How it works</a><a href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification">GitHub</a></div>
+    <div class="navlinks"><a href="#demo">Demo</a><a href="#how">How it works</a><a href="#faq">FAQ</a><a href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification">GitHub</a></div>
   </nav>
   <div class="hero">
     <span class="eyebrow">Runs 100% in your browser · nothing is uploaded</span>
     <h1 class="serif">See what the <em>model</em> sees.</h1>
     <p class="lead">Drop a chest X-ray. A DenseNet121 trained on 159,329 radiographs reads it on your device and shows where its evidence came from.</p>
     <div class="cta"><a class="btn primary" href="#demo">Try the demo</a><a class="btn" href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification">View the code</a></div>
-    <div class="stats">
-      <div class="stat"><b>159,329</b><span>training radiographs</span></div>
-      <div class="stat"><b>0.879</b><span>mean AUROC, CheXpert validation</span></div>
-      <div class="stat"><b>&lt;1s</b><span>per scan, on your device</span></div>
-      <div class="stat"><b>$0</b><span>servers to run it</span></div>
-    </div>
-    <p class="honest">Honest note: the best epoch was chosen on the 234-image validation set, so 0.879 is optimistic (0.854–0.879 across epochs 6–10). Images from other hospitals score lower — which is why every input is checked first.</p>
   </div>
+</div>
 </header>
 
 <div class="loop" aria-label="Built with"><div class="loop-track" id="loopTrack"></div></div>
 
+<section id="numbers">
+  <div class="wrap">
+    <div class="kicker">By the numbers</div>
+    <h2 class="serif" style="margin:0 auto">The project, flipped into view.</h2>
+    <div class="board" id="statsBoard" role="img" aria-label="159,329 training X-rays; mean AUROC 0.879; under 1 second per scan; $0 server cost; 26 MB model; runs on your CPU; 0 uploads; ONNX parity checked in CI"></div>
+    <p class="honest">Honest note: the best epoch was chosen on the 234-image validation set, so 0.879 is optimistic (0.854–0.879 across epochs 6–10). Images from other hospitals score lower — which is why every input is checked first.</p>
+  </div>
+</section>
+
 <section id="demo">
   <div class="wrap">
     <div class="kicker">Live demo</div>
-    <h2 class="serif">Drag a film in. Get a second look.</h2>
+    <h2 class="masked" id="maskedH">Drag a film in. Get a second look.</h2>
     <p class="sub">Pick any of the 20 sample films, drag one into the box, or upload your own PNG or JPG. Your image never leaves your device.</p>
     <div class="demo">
       <div class="card">
@@ -187,6 +240,7 @@ body{padding-bottom:96px}
           <span class="meta" id="latency"></span>
         </div>
         <div class="viewer" id="viewer"><span id="placeholder">Your image will appear here</span><img id="imgOrig" alt=""><img id="imgCam" class="cam" alt=""></div>
+        <div class="tl" id="tl"><button class="tl-head" id="tlHead" aria-expanded="false"><svg class="tl-glyph" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z"/></svg><span class="tl-label" id="tlLabel"></span><span class="tl-timer" id="tlTimer"></span><span class="tl-chev" aria-hidden="true">⌄</span></button><div class="tl-steps"><div><ul id="tlSteps"></ul></div></div><span class="sr" role="status" id="tlSr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></span></div>
         <div class="status" id="status"></div>
         <div class="warn" id="warn"></div>
         <div class="bars" id="bars"></div>
@@ -210,6 +264,33 @@ body{padding-bottom:96px}
   </div>
 </section>
 
+<section id="faq">
+  <div class="wrap">
+    <div class="kicker">FAQ</div>
+    <h2 class="serif">Questions people ask.</h2>
+    <div class="faq">
+      <h3>The model</h3>
+      <div class="qs">
+        <details><summary>Is this a medical device?</summary><p>No. It's a research and portfolio project. It hasn't been clinically validated and must not be used for diagnosis.</p></details>
+        <details><summary>How accurate is it?</summary><p>Mean AUROC 0.879 on the 234-image CheXpert validation set. That number is optimistic because the best epoch was picked on the same set — the next version fixes this with a held-out patient split and bootstrap confidence intervals. Expect lower scores on images from other hospitals.</p></details>
+        <details><summary>What was it trained on?</summary><p>159,329 chest radiographs from Stanford's CheXpert dataset (rows with uncertain labels were dropped), using a DenseNet121 pretrained on ImageNet, 10 epochs on one Colab T4 GPU.</p></details>
+        <details><summary>What is the heatmap?</summary><p>Grad-CAM: it highlights the regions that pushed the model's score up. It shows where the evidence came from, not whether the model is right — it can latch onto tubes, markers or text.</p></details>
+      </div>
+      <h3>Your data</h3>
+      <div class="qs">
+        <details><summary>Where does my image go?</summary><p>Nowhere. The model is downloaded once and runs in your browser with ONNX Runtime Web. Open your browser's network tab while you drop an image — nothing is sent.</p></details>
+        <details><summary>Why did I get an input warning?</summary><p>Chest X-rays are grayscale, reasonably large and roughly square. Colour photos, tiny thumbnails and panoramas are flagged so nobody trusts an answer the model was never trained to give.</p></details>
+      </div>
+      <h3>Engineering</h3>
+      <div class="qs">
+        <details><summary>What keeps the model honest?</summary><p>CI runs unit and API tests, a quality gate that blocks releases if AUROC drops, SHA-256 pinning of the weights, and a parity check proving the browser model matches PyTorch and Grad-CAM before this page is published.</p></details>
+        <details><summary>Can I run it as a server?</summary><p>Yes — <code>docker compose up</code> starts a FastAPI service with Prometheus, Grafana and live drift detection. The code is on GitHub.</p></details>
+        <details><summary>Why does it cost $0?</summary><p>There's no server. GitHub Pages hosts the site and the model file; your device does the compute.</p></details>
+      </div>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div class="wrap">
     <div class="big serif">Built by Athrva Raval</div>
@@ -219,7 +300,7 @@ body{padding-bottom:96px}
   </div>
 </footer>
 
-<nav class="dock" id="dock" aria-label="Quick links"><a href="#" data-t="Home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg></a><a href="#demo" data-t="Demo" aria-label="Demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M8 12h8"/></svg></a><a href="#how" data-t="How it works" aria-label="How it works"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5"/></svg></a><a href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification" data-t="GitHub" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13 6l-2 12"/></svg></a><a href="https://www.linkedin.com/in/athrva-raval/" data-t="LinkedIn" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0"/></svg></a></nav>
+<nav class="dock" id="dock" aria-label="Quick links"><a href="#" data-t="Home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg></a><a href="#demo" data-t="Demo" aria-label="Demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M8 12h8"/></svg></a><a href="#how" data-t="How it works" aria-label="How it works"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5"/></svg></a><a href="#faq" data-t="FAQ" aria-label="FAQ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9a2.5 2.5 0 114 2c-.9.6-1.5 1.2-1.5 2.5M12 17h.01"/></svg></a><a href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification" data-t="GitHub" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13 6l-2 12"/></svg></a><a href="https://www.linkedin.com/in/athrva-raval/" data-t="LinkedIn" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0"/></svg></a></nav>
 
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
 <script>
@@ -227,22 +308,31 @@ const $=id=>document.getElementById(id);
 const FINDINGS=["Atelectasis","Cardiomegaly","Consolidation","Edema","Pleural Effusion"];
 const MEAN=[0.485,0.456,0.406],STD=[0.229,0.224,0.225],S=224;
 
-// ---------- split-flap loader ----------
-const BOARD=[["159,329","CHEST X-RAYS"],["0.879","MEAN AUROC"],["<1 SEC","PER SCAN"],["$0","SERVER COST"],["100%","IN YOUR BROWSER"]];
-const COLS=15,CH=" ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$<%.,-";
-const pad=t=>{const l=Math.floor((COLS-t.length)/2);return(" ".repeat(l)+t).padEnd(COLS)};
-$("board").innerHTML=[0,1].map(r=>`<div class="row" style="--cols:${COLS}">${`<span class="tile${r?" small":""}"> </span>`.repeat(COLS)}</div>`).join("");
-const tiles=[...document.querySelectorAll("#board .row")].map(r=>[...r.children]);
-function flipTo(i){
-  BOARD[i].forEach((txt,r)=>pad(txt).split("").forEach((c,k)=>{
+// ---------- split-flap boards (vanilla take on Aceternity's Text Flipping Board) ----------
+const CH=" ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$<%.,-";
+function makeBoard(el,cols,rows,small=[]){
+  el.innerHTML=Array.from({length:rows},(_,r)=>`<div class="row" style="--cols:${cols}">${`<span class="tile${small.includes(r)?" small":""}"> </span>`.repeat(cols)}</div>`).join("");
+  const tiles=[...el.children].map(r=>[...r.children]);
+  return lines=>lines.forEach((txt,r)=>txt.padEnd(cols).slice(0,cols).split("").forEach((c,k)=>{
     const t=tiles[r][k];if(t.textContent===c)return;
     let n=4+((k*7+r*3)%6);
     const step=()=>{t.classList.remove("flip");void t.offsetWidth;t.classList.add("flip");
       t.textContent=--n>0?CH[Math.floor(Math.random()*CH.length)]:c;if(n>0)setTimeout(step,70)};
-    setTimeout(step,k*25);
+    setTimeout(step,k*25+r*60);
   }));
 }
-let bi=0;flipTo(0);const boardTimer=setInterval(()=>flipTo(bi=(bi+1)%BOARD.length),1800);
+const center=(t,w)=>(" ".repeat(Math.floor((w-t.length)/2))+t);
+const LOADER=[["159,329","CHEST X-RAYS"],["0.879","MEAN AUROC"],["<1 SEC","PER SCAN"],["$0","SERVER COST"],["100%","IN YOUR BROWSER"]];
+const flipLoader=makeBoard($("board"),15,2,[1]);
+let bi=0;flipLoader(LOADER[0].map(t=>center(t,15)));
+const boardTimer=setInterval(()=>flipLoader(LOADER[bi=(bi+1)%LOADER.length].map(t=>center(t,15))),1800);
+const PAGES=[[["X-RAYS","159,329"],["MEAN AUROC","0.879"],["PER SCAN","<1 SEC"],["SERVER COST","$0"]],
+             [["MODEL SIZE","26 MB"],["RUNS ON","YOUR CPU"],["UPLOADS","0"],["CI PARITY","PASS"]]];
+// phones get a narrow 12-column board with key and value on separate rows so tiles stay readable
+const NARROW=innerWidth<640,SC=NARROW?12:20;
+const STATS=PAGES.map(pg=>NARROW?pg.flatMap(([k,v])=>[k,v.padStart(SC)]):pg.map(([k,v])=>k+v.padStart(SC-k.length)));
+const flipStats=makeBoard($("statsBoard"),SC,NARROW?8:4,NARROW?[0,2,4,6]:[]);let si=0,statsTimer=null;
+new IntersectionObserver(([e])=>{if(e.isIntersecting&&!statsTimer){flipStats(STATS[0]);statsTimer=setInterval(()=>flipStats(STATS[si=(si+1)%2]),7000)}else if(!e.isIntersecting&&statsTimer){clearInterval(statsTimer);statsTimer=null}}).observe($("statsBoard"));
 const t0=performance.now();let revealed=false;
 function reveal(){if(revealed)return;revealed=true;$("loader").classList.add("done");setTimeout(()=>clearInterval(boardTimer),600)}
 $("skip").onclick=reveal;
@@ -310,14 +400,29 @@ function inputWarnings(bmp){
   if(spread>12)out.push(`image looks colour (spread ${spread.toFixed(1)}); chest X-rays are grayscale`);
   return out;
 }
+// thought line: start() -> step(text)... -> done(); the timer freezes into "Read in 0.4s"
+const tl=(()=>{
+  let t0=0,iv=0;const el=$("tl"),steps=$("tlSteps"),open=v=>{el.classList.toggle("open",v);$("tlHead").setAttribute("aria-expanded",v)};
+  $("tlHead").onclick=()=>open(!el.classList.contains("open"));
+  const tick=()=>$("tlTimer").textContent=((performance.now()-t0)/1000).toFixed(1)+"s";
+  return{
+    start(){clearInterval(iv);t0=performance.now();steps.innerHTML="";el.className="tl on working open";$("tlLabel").textContent="Reading the film…";$("tlSr").textContent="Reading the film";tick();iv=setInterval(tick,100)},
+    step(txt){steps.lastElementChild?.classList.add("done");steps.insertAdjacentHTML("beforeend",`<li><i></i>${txt}</li>`)},
+    done(){clearInterval(iv);tick();steps.lastElementChild?.classList.add("done");el.classList.remove("working");$("tlLabel").textContent="Read in";$("tlSr").textContent="Read in "+$("tlTimer").textContent;setTimeout(()=>open(false),350)},
+    fail(){clearInterval(iv);el.className="tl"}
+  };
+})();
 async function run(file){
   current=file;last=null;
   $("placeholder").style.display="none";$("imgOrig").src=URL.createObjectURL(file);$("imgCam").removeAttribute("src");view("orig");
   $("bars").innerHTML="";$("warn").style.display="none";$("latency").textContent="";
   try{
+    setStatus("");tl.start();tl.step("Decoding the image");
     const bmp=await createImageBitmap(file);
-    setStatus(`<span class="spin"></span>Reading the film…`);
+    tl.step("Checking it looks like a chest X-ray");const w=inputWarnings(bmp);
+    tl.step(sessionP?"Model ready on your device":"Loading the model (first time only)");
     const s=await getSession();
+    tl.step("Running DenseNet121");await new Promise(r=>setTimeout(r,30));
     const c=canvas(S,S),x=c.getContext("2d");x.imageSmoothingQuality="high";x.drawImage(bmp,0,0,S,S);
     const px=x.getImageData(0,0,S,S).data,t=new Float32Array(3*S*S);
     for(let i=0;i<S*S;i++)for(let ch=0;ch<3;ch++)t[ch*S*S+i]=(px[i*4+ch]/255-MEAN[ch])/STD[ch];
@@ -328,13 +433,14 @@ async function run(file){
     const probs=Object.fromEntries(FINDINGS.map((f,i)=>[f,out.probs.data[i]]));
     const top=FINDINGS.reduce((a,b)=>probs[a]>=probs[b]?a:b);
     last={bmp,cams:out.cams.data,cache:{}};
-    setStatus(`Strongest signal: <strong>${top}</strong> <span class="meta">· tap a row to see its heatmap</span>`);
+    tl.step("Drawing the Grad-CAM heatmap");
     $("latency").textContent=`${Math.round(ms)} ms on your device`;
-    const w=inputWarnings(bmp);if(w.length){$("warn").style.display="block";$("warn").textContent="Input check: "+w.join("; ")}
+    if(w.length){$("warn").style.display="block";$("warn").textContent="Input check: "+w.join("; ")}
     $("bars").innerHTML=FINDINGS.map(f=>`<button class="fbar" data-f="${f}"><span>${f}</span><span class="track"><span class="fill"></span></span><b>${Math.round(probs[f]*100)}%</b></button>`).join("");
     requestAnimationFrame(()=>document.querySelectorAll(".fbar").forEach(b=>b.querySelector(".fill").style.width=(probs[b.dataset.f]*100)+"%"));
-    explain(top);
-  }catch(err){setStatus(`Couldn't read that image (${err.message||err}). Try a PNG or JPG.`)}
+    explain(top);tl.done();
+    setStatus(`Strongest signal: <strong>${top}</strong> <span class="meta">· tap a row to see its heatmap</span>`);
+  }catch(err){tl.fail();setStatus(`Couldn't read that image (${err.message||err}). Try a PNG or JPG.`)}
 }
 $("bars").addEventListener("click",e=>{const b=e.target.closest(".fbar");if(b)explain(b.dataset.f)});
 
@@ -364,6 +470,42 @@ $("vCam").onclick=()=>{if($("imgCam").getAttribute("src"))view("cam")};
 const dock=$("dock"),dockItems=[...dock.children];
 dock.addEventListener("mousemove",e=>{if(innerWidth<=860)return;dockItems.forEach(a=>{const r=a.getBoundingClientRect(),d=Math.abs(e.clientX-(r.left+r.width/2)),sz=40+40*Math.max(0,1-d/150);a.style.width=a.style.height=sz+"px"})});
 dock.addEventListener("mouseleave",()=>dockItems.forEach(a=>a.style.width=a.style.height=""));
+
+// ---------- cloud shader hero (fbm noise clouds drifting over a soft sky) ----------
+(function(){
+  const c=$("clouds"),gl=c.getContext("webgl",{alpha:false,antialias:false});if(!gl)return;
+  const fs=`precision mediump float;uniform vec2 R;uniform float T;
+  float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+  float n(vec2 p){vec2 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),u.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),u.x),u.y);}
+  float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}
+  void main(){vec2 uv=gl_FragCoord.xy/R;vec2 p=vec2(uv.x*R.x/R.y,uv.y)*2.2;p.x+=T*.025;
+    float c=fbm(p+fbm(p*.6-T*.012));c=smoothstep(.48,.86,c)*smoothstep(.0,.55,uv.y);
+    vec3 sky=mix(vec3(.92,.96,1.),vec3(.62,.77,.92),uv.y);
+    vec3 col=mix(sky,vec3(1.),c*.9);col=mix(vec3(1.),col,smoothstep(.0,.3,uv.y));
+    gl_FragColor=vec4(col,1.);}`;
+  const sh=(t,src)=>{const s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);return s};
+  const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,"attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}"));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);
+  if(!gl.getProgramParameter(pr,gl.LINK_STATUS))return;gl.useProgram(pr);
+  gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+  const uR=gl.getUniformLocation(pr,"R"),uT=gl.getUniformLocation(pr,"T");
+  // ponytail: half-res render, clouds are soft so upscaling is invisible and it's 4x cheaper
+  const size=()=>{c.width=Math.max(1,c.clientWidth>>1);c.height=Math.max(1,c.clientHeight>>1);gl.viewport(0,0,c.width,c.height);gl.uniform2f(uR,c.width,c.height)};
+  new ResizeObserver(size).observe(c);size();
+  const still=matchMedia("(prefers-reduced-motion: reduce)").matches,t0=performance.now();let raf=0;
+  const draw=t=>{gl.uniform1f(uT,(t-t0)/1000+40);gl.drawArrays(gl.TRIANGLES,0,3);raf=still?0:requestAnimationFrame(draw)};
+  new IntersectionObserver(([e])=>{if(e.isIntersecting&&!raf)raf=requestAnimationFrame(draw);else if(!e.isIntersecting&&raf){cancelAnimationFrame(raf);raf=0}}).observe(c);
+})();
+
+// masked heading: wipe in on view, then the X-ray drifts and follows the pointer under the letters
+(function(){
+  const h=$("maskedH");let tx=0,ty=0,x=0,y=0,t=0,raf=0;
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches){h.style.clipPath="none";return}
+  h.addEventListener("pointermove",e=>{const r=h.getBoundingClientRect();tx=-((e.clientX-r.left)/r.width*2-1)*26;ty=-((e.clientY-r.top)/r.height*2-1)*26});
+  h.addEventListener("pointerleave",()=>{tx=ty=0});
+  const frame=()=>{t+=.016;x+=(tx+Math.sin(t*.21)*18-x)*.08;y+=(ty+Math.cos(t*.17)*11-y)*.08;h.style.setProperty("--mx",x.toFixed(1)+"px");h.style.setProperty("--my",y.toFixed(1)+"px");raf=requestAnimationFrame(frame)};
+  new IntersectionObserver(([e])=>{if(e.isIntersecting){h.classList.add("in");if(!raf)raf=requestAnimationFrame(frame)}else if(raf){cancelAnimationFrame(raf);raf=0}},{threshold:.1}).observe(h.parentElement); // observe the parent: Chrome counts the clip-path, so the clipped heading never "intersects"
+})();
 </script>
 </body>
 </html>
