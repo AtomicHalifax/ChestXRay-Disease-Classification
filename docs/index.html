@@ -504,7 +504,9 @@ dock.addEventListener("mouseleave",()=>dockItems.forEach(a=>a.style.width=a.styl
   h.addEventListener("pointermove",e=>{const r=h.getBoundingClientRect();tx=-((e.clientX-r.left)/r.width*2-1)*26;ty=-((e.clientY-r.top)/r.height*2-1)*26});
   h.addEventListener("pointerleave",()=>{tx=ty=0});
   const frame=()=>{t+=.016;x+=(tx+Math.sin(t*.21)*18-x)*.08;y+=(ty+Math.cos(t*.17)*11-y)*.08;h.style.setProperty("--mx",x.toFixed(1)+"px");h.style.setProperty("--my",y.toFixed(1)+"px");raf=requestAnimationFrame(frame)};
-  new IntersectionObserver(([e])=>{if(e.isIntersecting){h.classList.add("in");if(!raf)raf=requestAnimationFrame(frame)}else if(raf){cancelAnimationFrame(raf);raf=0}},{threshold:.1}).observe(h.parentElement); // observe the parent: Chrome counts the clip-path, so the clipped heading never "intersects"
+  // plain scroll check instead of IntersectionObserver: Chrome counts the clip-path, and an unrevealed heading must never get stuck invisible
+  const check=()=>{const r=h.getBoundingClientRect(),vis=r.top<innerHeight*.9&&r.bottom>0;if(vis){h.classList.add("in");if(!raf)raf=requestAnimationFrame(frame)}else if(raf){cancelAnimationFrame(raf);raf=0}};
+  addEventListener("scroll",check,{passive:true});addEventListener("resize",check);check();
 })();
 </script>
 </body>
