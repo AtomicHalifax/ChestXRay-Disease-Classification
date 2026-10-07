@@ -119,6 +119,16 @@ footer ul{margin-top:10px;padding-left:18px;font-size:13px}
   .navlinks{display:none}.tray{grid-template-columns:repeat(4,1fr)}
   .fbar{grid-template-columns:112px 1fr 42px}
 }
+
+/* ---------- floating dock (vanilla port of Aceternity FloatingDock) ---------- */
+body{padding-bottom:96px}
+.dock{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:40;display:flex;align-items:flex-end;gap:12px;height:64px;padding:0 14px 12px;border-radius:18px;background:rgba(248,250,252,.85);border:1px solid var(--line);backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(15,23,42,.08)}
+.dock a{position:relative;width:40px;height:40px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:width .12s ease-out,height .12s ease-out}
+.dock a:hover{color:var(--ink)}
+.dock svg{width:50%;height:50%}
+.dock a::before{content:attr(data-t);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translate(-50%,4px);opacity:0;pointer-events:none;white-space:nowrap;font:500 12px Inter,sans-serif;color:var(--ink);background:#f1f5f9;border:1px solid var(--line);border-radius:6px;padding:2px 8px;transition:opacity .15s,transform .15s}
+.dock a:hover::before,.dock a:focus-visible::before{opacity:1;transform:translate(-50%,0)}
+@media (max-width:860px){.dock{gap:8px;height:52px;padding:0 10px 8px}.dock a{width:36px;height:36px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -208,6 +218,8 @@ footer ul{margin-top:10px;padding-left:18px;font-size:13px}
     <details><summary>Sample image credits (Wikimedia Commons)</summary><ul id="credits"></ul></details>
   </div>
 </footer>
+
+<nav class="dock" id="dock" aria-label="Quick links"><a href="#" data-t="Home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg></a><a href="#demo" data-t="Demo" aria-label="Demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M8 12h8"/></svg></a><a href="#how" data-t="How it works" aria-label="How it works"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5"/></svg></a><a href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification" data-t="GitHub" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13 6l-2 12"/></svg></a><a href="https://www.linkedin.com/in/athrva-raval/" data-t="LinkedIn" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0"/></svg></a></nav>
 
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
 <script>
@@ -347,6 +359,11 @@ function explain(f){
 function view(v){$("viewer").classList.toggle("show-cam",v==="cam");$("vOrig").classList.toggle("on",v!=="cam");$("vCam").classList.toggle("on",v==="cam")}
 $("vOrig").onclick=()=>view("orig");
 $("vCam").onclick=()=>{if($("imgCam").getAttribute("src"))view("cam")};
+
+// ---------- floating dock: icons grow as the cursor gets close (40px -> 80px within 150px) ----------
+const dock=$("dock"),dockItems=[...dock.children];
+dock.addEventListener("mousemove",e=>{if(innerWidth<=860)return;dockItems.forEach(a=>{const r=a.getBoundingClientRect(),d=Math.abs(e.clientX-(r.left+r.width/2)),sz=40+40*Math.max(0,1-d/150);a.style.width=a.style.height=sz+"px"})});
+dock.addEventListener("mouseleave",()=>dockItems.forEach(a=>a.style.width=a.style.height=""));
 </script>
 </body>
 </html>
