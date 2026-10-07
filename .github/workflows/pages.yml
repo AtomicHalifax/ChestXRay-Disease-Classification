@@ -5,7 +5,7 @@ name: Website
 on:
   push:
     branches: [main]
-    paths: ["docs/**", "scripts/export_onnx.py", "src/chexpert_cls/model.py", "src/chexpert_cls/config.py", ".github/workflows/pages.yml"]
+    paths: ["docs/**", "scripts/export_onnx.py", "scripts/fetch_samples.py", "samples/manifest.json", "src/chexpert_cls/model.py", "src/chexpert_cls/config.py", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -35,6 +35,8 @@ jobs:
           pip install -e . onnx onnxruntime
       - name: Export model to ONNX (verified against PyTorch + Grad-CAM)
         run: python scripts/export_onnx.py --out docs/model.onnx
+      - name: Sample films (Wikimedia, resized for the site)
+        run: python scripts/fetch_samples.py --site docs/samples
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
