@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chest X-ray Reader</title>
+<meta name="description" content="DenseNet121 trained on 159,329 chest X-rays. Drop an image, get five findings and a Grad-CAM heatmap. Research demo by Athrva Raval.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1d2430; --muted:#5d6675; --line:#e6e1da; --paper:#faf7f3; --card:#ffffff;
+  --sky1:#8fa3b8; --sky2:#b9b4bd; --sky3:#e8b9a2; --accent:#3d5a80; --warm:#d9825b;
+  --radius:22px;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{font-family:Inter,system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.serif{font-family:"Instrument Serif",Georgia,serif;font-weight:400}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.pill{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:11px 20px;font:500 14px Inter,sans-serif;text-decoration:none;border:0;cursor:pointer;transition:transform .2s,background .2s}
+.pill:hover{transform:translateY(-1px)}
+.pill.light{background:#fff;color:var(--ink)}
+.pill.ghost{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.45);backdrop-filter:blur(6px)}
+.pill.dark{background:var(--ink);color:#fff}
+
+/* hero */
+.hero{position:relative;min-height:92vh;display:flex;flex-direction:column;color:#fff;overflow:hidden;
+  background:linear-gradient(180deg,var(--sky1) 0%,var(--sky2) 48%,var(--sky3) 100%)}
+#threads{position:absolute;inset:0;width:100%;height:100%;display:block}
+nav{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:22px 0}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:-.01em;text-decoration:none}
+.logo i{width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff 0 18%,rgba(255,255,255,.35) 19% 100%);border:1px solid rgba(255,255,255,.7)}
+.navlinks{display:flex;gap:26px;font-size:14px}
+.navlinks a{text-decoration:none;opacity:.9}
+.hero-body{position:relative;z-index:2;text-shadow:0 1px 18px rgba(40,50,70,.25);flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 0 90px}
+.eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;opacity:.85;margin-bottom:22px}
+h1{font-size:clamp(46px,8vw,96px);line-height:1;letter-spacing:-.02em;max-width:900px}
+h1 em{font-style:italic;opacity:.92}
+.hero p.lead{max-width:560px;margin:26px auto 34px;font-size:18px;font-weight:300;opacity:.95}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.disclaimer-chip{margin-top:28px;font-size:12px;opacity:.8}
+
+/* logo loop */
+.loop{border-bottom:1px solid var(--line);background:#fff;overflow:hidden;padding:22px 0;
+  mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+.loop-track{display:flex;width:max-content;animation:loop 38s linear infinite}
+.loop:hover .loop-track{animation-play-state:paused}
+.loop span{display:inline-flex;align-items:center;gap:12px;padding:0 32px;font-size:17px;color:var(--muted);white-space:nowrap;font-weight:500}
+.loop span::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--sky3)}
+@keyframes loop{to{transform:translateX(-50%)}}
+
+section{padding:96px 0}
+.kicker{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--warm);margin-bottom:14px;font-weight:500}
+h2{font-size:clamp(36px,5vw,56px);line-height:1.05;letter-spacing:-.015em;max-width:720px}
+.sub{color:var(--muted);max-width:600px;margin-top:16px;font-size:17px}
+
+/* demo */
+.demo{display:grid;grid-template-columns:1fr 1.05fr;gap:24px;margin-top:48px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+.drop{border:1.5px dashed #c9c2b8;border-radius:18px;min-height:230px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:24px;cursor:pointer;transition:background .2s,border-color .2s}
+.drop.over{background:#f3ece4;border-color:var(--warm)}
+.drop strong{font-size:17px;font-weight:500}
+.drop small{color:var(--muted)}
+.tray-head{display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 12px}
+.tray-head h3{font-size:15px;font-weight:600}
+.tray-head span{font-size:13px;color:var(--muted)}
+.tray{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.tray button{position:relative;aspect-ratio:1;border:1px solid var(--line);border-radius:12px;overflow:hidden;padding:0;background:#111;cursor:grab}
+.tray button:focus-visible,.pill:focus-visible,.drop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tray img{width:100%;height:100%;object-fit:cover;opacity:.92;transition:transform .3s,opacity .3s}
+.tray button:hover img{transform:scale(1.06);opacity:1}
+.tray button em{position:absolute;left:6px;bottom:5px;font:500 10px Inter,sans-serif;color:#fff;font-style:normal;text-shadow:0 1px 3px #000}
+
+.result{display:flex;flex-direction:column;gap:18px}
+.viewer{position:relative;border-radius:16px;overflow:hidden;background:#0f1218;aspect-ratio:1;display:flex;align-items:center;justify-content:center;color:#8b93a3;font-size:14px}
+.viewer img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .35s}
+.viewer .cam{opacity:0}
+.viewer.show-cam .cam{opacity:1}
+.toggle{display:flex;gap:6px;background:#f2eee8;border-radius:999px;padding:4px;width:max-content}
+.toggle button{border:0;background:transparent;border-radius:999px;padding:7px 14px;font:500 13px Inter,sans-serif;cursor:pointer;color:var(--muted)}
+.toggle button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar{display:grid;grid-template-columns:130px 1fr 48px;align-items:center;gap:12px;font-size:14px;cursor:pointer;border:0;background:none;padding:2px 0;text-align:left;font-family:inherit;color:inherit}
+.bar .track{height:10px;border-radius:999px;background:#efe9e2;overflow:hidden}
+.bar .fill{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--sky1),var(--warm));transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.bar.sel{font-weight:600}
+.bar.sel .fill{background:linear-gradient(90deg,var(--accent),var(--warm))}
+.bar b{font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.meta{font-size:13px;color:var(--muted)}
+.warn{font-size:13px;background:#fff4e8;border:1px solid #f1d6bb;color:#8a4b1f;border-radius:12px;padding:10px 12px;display:none}
+.status{font-size:14px;color:var(--muted);min-height:20px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #d9d2c9;border-top-color:var(--warm);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:44px}
+.stat{padding:26px;border-radius:var(--radius);background:#fff;border:1px solid var(--line)}
+.stat .n{font-size:52px;line-height:1}
+.stat p{color:var(--muted);font-size:14px;margin-top:10px}
+.honest{margin-top:18px;font-size:14px;color:var(--muted);max-width:760px}
+
+/* pipeline */
+.pipe{background:linear-gradient(180deg,#fff, #f6efe8)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:44px;counter-reset:s}
+.step{padding:26px;border-radius:var(--radius);background:#fff;border:1px solid var(--line);counter-increment:s}
+.step::before{content:"0" counter(s);font-family:"Instrument Serif",serif;font-size:30px;color:var(--warm);display:block;margin-bottom:10px}
+.step h3{font-size:17px;font-weight:600;margin-bottom:6px}
+.step p{color:var(--muted);font-size:14px}
+
+footer{padding:56px 0 70px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+footer .big{font-size:34px;color:var(--ink);margin-bottom:14px}
+footer details{margin-top:18px}
+footer summary{cursor:pointer;color:var(--ink)}
+footer ul{margin-top:10px;padding-left:18px}
+
+@media (max-width:860px){
+  .demo,.steps{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .navlinks{display:none}
+  .bar{grid-template-columns:110px 1fr 44px}
+}
+@media (prefers-reduced-motion:reduce){.loop-track{animation:none}*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <canvas id="threads" aria-hidden="true"></canvas>
+  <div class="wrap" style="position:relative;z-index:2;width:100%">
+    <nav>
+      <a class="logo" href="#"><i></i>CXR Reader</a>
+      <div class="navlinks"><a href="#demo">Demo</a><a href="#results">Results</a><a href="#pipeline">How it works</a><a href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification">GitHub</a></div>
+    </nav>
+  </div>
+  <div class="hero-body wrap">
+    <div class="eyebrow">DenseNet121 · CheXpert · Grad-CAM</div>
+    <h1 class="serif">See what the <em>model</em> sees.</h1>
+    <p class="lead">Drop a chest X-ray. A network trained on 159,329 radiographs scores five findings and shows where its evidence came from.</p>
+    <div class="cta">
+      <a class="pill light" href="#demo">Try the demo</a>
+      <a class="pill ghost" href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification">View the code</a>
+    </div>
+    <div class="disclaimer-chip">Research demo · not a medical device</div>
+  </div>
+</header>
+
+<div class="loop" aria-label="Built with">
+  <div class="loop-track" id="loopTrack"></div>
+</div>
+
+<section id="demo">
+  <div class="wrap">
+    <div class="kicker">Live demo</div>
+    <h2 class="serif">Drag an X-ray in. Get a second look.</h2>
+    <p class="sub">Pick one of the ten sample films below, drag it into the box, or upload your own. Images go to the API on AWS and aren't stored.</p>
+
+    <div class="demo">
+      <div class="card">
+        <label class="drop" id="drop" tabindex="0">
+          <input type="file" id="file" accept="image/png,image/jpeg" hidden>
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          <strong>Drop an X-ray here</strong>
+          <small>or click to choose a PNG / JPG</small>
+        </label>
+        <div class="tray-head"><h3>Sample films</h3><span>drag or click</span></div>
+        <div class="tray" id="tray"></div>
+      </div>
+
+      <div class="card result" aria-live="polite">
+        <div class="row">
+          <div class="toggle" role="group" aria-label="View">
+            <button id="vOrig" class="on">X-ray</button>
+            <button id="vCam">Grad-CAM</button>
+          </div>
+          <span class="meta" id="latency"></span>
+        </div>
+        <div class="viewer" id="viewer"><span id="placeholder">Your image will appear here</span><img id="imgOrig" alt=""><img id="imgCam" class="cam" alt="Grad-CAM heatmap"></div>
+        <div class="status" id="status"></div>
+        <div class="warn" id="warn"></div>
+        <div class="bars" id="bars"></div>
+        <div class="meta" id="expected"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="results" style="background:#fff">
+  <div class="wrap">
+    <div class="kicker">Results</div>
+    <h2 class="serif">Measured, with the caveats left in.</h2>
+    <div class="stats">
+      <div class="stat"><div class="n serif">0.879</div><p>mean AUROC on the 234-image CheXpert validation set</p></div>
+      <div class="stat"><div class="n serif">159K</div><p>training radiographs (U-Ignore policy)</p></div>
+      <div class="stat"><div class="n serif">5</div><p>findings: Atelectasis, Cardiomegaly, Consolidation, Edema, Pleural Effusion</p></div>
+      <div class="stat"><div class="n serif">~0.1s</div><p>per image on a 2-vCPU AWS server, no GPU</p></div>
+    </div>
+    <p class="honest">The best epoch was picked on that same validation set, so 0.879 is optimistic (it ranged 0.854–0.879 across epochs 6–10). On outside images from other hospitals the model does noticeably worse — which is why the service checks every input and watches for drift.</p>
+  </div>
+</section>
+
+<section id="pipeline" class="pipe">
+  <div class="wrap">
+    <div class="kicker">How it works</div>
+    <h2 class="serif">A model is the easy part. Here's the rest.</h2>
+    <div class="steps">
+      <div class="step"><h3>Train &amp; track</h3><p>PyTorch training with patient-level splits, logged to MLflow. Weights versioned on Hugging Face and pinned by SHA-256.</p></div>
+      <div class="step"><h3>Gate before release</h3><p>CI runs tests and a quality gate: a new model can't ship if AUROC drops against the baseline.</p></div>
+      <div class="step"><h3>Ship as a container</h3><p>FastAPI in Docker, published to GHCR on every release tag and running on AWS EC2 behind HTTPS.</p></div>
+      <div class="step"><h3>Guard the input</h3><p>Colour photos, tiny images and odd shapes are flagged before anyone trusts the answer.</p></div>
+      <div class="step"><h3>Explain</h3><p>Grad-CAM shows where the evidence came from — and when the model is looking at the wrong thing.</p></div>
+      <div class="step"><h3>Monitor drift</h3><p>Prometheus + Grafana track latency, errors and a PSI drift score comparing live predictions with validation.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="big serif">Built by Athrva Raval</div>
+    <p>BSc Data Science &amp; AI, IIT Guwahati · <a href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification">GitHub</a> · <a href="https://www.linkedin.com/in/athrva-raval/">LinkedIn</a></p>
+    <p style="margin-top:10px">Research and portfolio project. Not a medical device and not for clinical use. Trained on Stanford CheXpert under its research-use agreement.</p>
+    <details><summary>Sample image credits (Wikimedia Commons)</summary><ul id="credits"></ul></details>
+  </div>
+</footer>
+
+<script>
+const API = "https://13-237-113-178.sslip.io";
+const FINDINGS = ["Atelectasis","Cardiomegaly","Consolidation","Edema","Pleural Effusion"];
+const SAMPLES = [
+ ["normal_pa_1","No Finding","Mikael Häggström","CC0","https://commons.wikimedia.org/wiki/File:Normal_posteroanterior_(PA)_chest_radiograph_(X-ray).jpg","https://upload.wikimedia.org/wikipedia/commons/a/a1/Normal_posteroanterior_%28PA%29_chest_radiograph_%28X-ray%29.jpg"],
+ ["normal_pa_2","No Finding","Stillwaterising","CC0","https://commons.wikimedia.org/wiki/File:Chest_Xray_PA_3-8-2010.png","https://upload.wikimedia.org/wikipedia/commons/c/c8/Chest_Xray_PA_3-8-2010.png"],
+ ["effusion_left","Pleural Effusion","James Heilman, MD","CC BY-SA 3.0","https://commons.wikimedia.org/wiki/File:Effusionhalf.PNG","https://upload.wikimedia.org/wikipedia/commons/3/30/Effusionhalf.PNG"],
+ ["effusion_bilateral_ap","Pleural Effusion","CDC / D. Loren Ketai, M.D.","Public domain","https://commons.wikimedia.org/wiki/File:6077_lores.jpg","https://upload.wikimedia.org/wikipedia/commons/a/ae/6077_lores.jpg"],
+ ["heart_failure","Cardiomegaly, Edema, Pleural Effusion","Mikael Häggström","CC0","https://commons.wikimedia.org/wiki/File:Chest_radiograph_of_a_lung_with_Kerley_B_lines.jpg","https://upload.wikimedia.org/wikipedia/commons/c/ca/Chest_radiograph_of_a_lung_with_Kerley_B_lines.jpg"],
+ ["edema_neurogenic","Edema","Moustafa A. Mansour","CC BY-SA 4.0","https://commons.wikimedia.org/wiki/File:Neurogenic_Pulmonary_Edema.jpg","https://upload.wikimedia.org/wikipedia/commons/c/c2/Neurogenic_Pulmonary_Edema.jpg"],
+ ["edema_hape","Edema","Maryrosegrant","CC BY-SA 4.0","https://commons.wikimedia.org/wiki/File:Chest_XR_of_HAPE.png","https://upload.wikimedia.org/wikipedia/commons/7/79/Chest_XR_of_HAPE.png"],
+ ["atelectasis_lul","Atelectasis","Hellerhoff","CC BY-SA 3.0","https://commons.wikimedia.org/wiki/File:Oberlappenatelektase_links_pa.jpg","https://upload.wikimedia.org/wikipedia/commons/2/2d/Oberlappenatelektase_links_pa.jpg"],
+ ["consolidation_rml","Consolidation","Mikael Häggström","CC0","https://commons.wikimedia.org/wiki/File:X-ray_of_lobar_pneumonia.jpg","https://upload.wikimedia.org/wikipedia/commons/5/51/X-ray_of_lobar_pneumonia.jpg"],
+ ["consolidation_ap","Consolidation","Unknown (public domain)","Public domain","https://commons.wikimedia.org/wiki/File:Pneumonia_x_ray.jpg","https://upload.wikimedia.org/wikipedia/commons/0/01/Pneumonia_x_ray.jpg"]
+].map(([id,expected,author,license,page,url])=>({id,expected,author,license,page,url}));
+
+const $ = id => document.getElementById(id);
+
+// ---- logo loop (tech stack) ----
+const STACK = ["PyTorch","DenseNet121","FastAPI","Docker","GitHub Actions","MLflow","Hugging Face","AWS EC2","Caddy · HTTPS","Prometheus","Grafana","Grad-CAM","pytest"];
+$("loopTrack").innerHTML = [...STACK,...STACK].map(s=>`<span>${s}</span>`).join("");
+
+// ---- sample tray + credits ----
+$("tray").innerHTML = SAMPLES.map((s,i)=>`<button draggable="true" data-i="${i}" aria-label="Use sample: ${s.expected}"><img src="${s.url}" alt="" loading="lazy"><em>${s.expected.split(",")[0]}</em></button>`).join("");
+$("credits").innerHTML = SAMPLES.map(s=>`<li><a href="${s.page}">${s.id}</a> — ${s.author}, ${s.license}</li>`).join("");
+$("tray").addEventListener("click",e=>{const b=e.target.closest("button");if(b)useSample(+b.dataset.i)});
+$("tray").addEventListener("dragstart",e=>{const b=e.target.closest("button");if(b)e.dataTransfer.setData("text/x-sample",b.dataset.i)});
+
+// ---- drop zone ----
+const drop=$("drop");
+["dragenter","dragover"].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(t=>drop.addEventListener(t,()=>drop.classList.remove("over")));
+drop.addEventListener("drop",e=>{
+  e.preventDefault();
+  const i=e.dataTransfer.getData("text/x-sample");
+  if(i!=="") return useSample(+i);
+  const f=e.dataTransfer.files[0];
+  if(f) run(f,null);
+});
+drop.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("file").click()}});
+$("file").addEventListener("change",e=>{const f=e.target.files[0];if(f)run(f,null)});
+
+async function useSample(i){
+  const s=SAMPLES[i];
+  setStatus(`<span class="spin"></span>Fetching sample…`);
+  try{
+    const blob=await (await fetch(s.url)).blob();
+    run(new File([blob],s.id+(s.url.toLowerCase().endsWith(".png")?".png":".jpg"),{type:blob.type}),s);
+  }catch{ setStatus("Couldn't load that sample. Try another one or upload your own."); }
+}
+
+// ---- prediction ----
+let current=null, selected=null, camCache={};
+function setStatus(h){$("status").innerHTML=h}
+
+async function run(file,sample){
+  current=file; camCache={};
+  $("placeholder").style.display="none";
+  $("imgOrig").src=URL.createObjectURL(file);
+  $("imgCam").removeAttribute("src");
+  view("orig");
+  $("bars").innerHTML=""; $("warn").style.display="none"; $("latency").textContent="";
+  $("expected").textContent = sample ? `Sample label (from the uploader's description): ${sample.expected}` : "";
+  setStatus(`<span class="spin"></span>Running the model…`);
+  const fd=new FormData(); fd.append("file",file);
+  try{
+    const r=await fetch(API+"/predict",{method:"POST",body:fd});
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.detail||r.statusText);
+    if(file!==current) return;
+    setStatus(`Top finding: <strong>${j.top_finding}</strong> · tap a finding to see its heatmap`);
+    $("latency").textContent=`${Math.round(j.latency_ms)} ms on CPU`;
+    if(j.warnings&&j.warnings.length){$("warn").style.display="block";$("warn").textContent="Input check: "+j.warnings.join("; ")}
+    $("bars").innerHTML=FINDINGS.map(f=>`<button class="bar" data-f="${f}"><span>${f}</span><span class="track"><span class="fill"></span></span><b>${Math.round(j.findings[f]*100)}%</b></button>`).join("");
+    requestAnimationFrame(()=>document.querySelectorAll(".bar").forEach(b=>b.querySelector(".fill").style.width=(j.findings[b.dataset.f]*100)+"%"));
+    explain(j.top_finding);
+  }catch(err){
+    setStatus(`The API didn't answer (${err.message}). It may be paused to save credits — try again in a minute.`);
+  }
+}
+
+$("bars").addEventListener("click",e=>{const b=e.target.closest(".bar");if(b)explain(b.dataset.f)});
+
+async function explain(f){
+  selected=f;
+  document.querySelectorAll(".bar").forEach(b=>b.classList.toggle("sel",b.dataset.f===f));
+  if(!camCache[f]){
+    const file=current, fd=new FormData(); fd.append("file",file);
+    $("vCam").textContent="Grad-CAM…";
+    try{
+      const r=await fetch(`${API}/explain?finding=${encodeURIComponent(f)}`,{method:"POST",body:fd});
+      if(!r.ok) throw 0;
+      const url=URL.createObjectURL(await r.blob());
+      if(file!==current) return;
+      camCache[f]=url;
+    }catch{ $("vCam").textContent="Grad-CAM"; return; }
+  }
+  if(selected!==f) return;
+  $("imgCam").src=camCache[f]; $("imgCam").alt=`Grad-CAM heatmap for ${f}`;
+  $("vCam").textContent=`Grad-CAM · ${f}`;
+  view("cam");
+}
+function view(v){$("viewer").classList.toggle("show-cam",v==="cam");$("vOrig").classList.toggle("on",v!=="cam");$("vCam").classList.toggle("on",v==="cam")}
+$("vOrig").onclick=()=>view("orig");
+$("vCam").onclick=()=>{ if($("imgCam").getAttribute("src")) view("cam"); };
+
+// ---- WebThreads background (vanilla WebGL2 port of React Bits <WebThreads/>) ----
+(function(){
+  const canvas=$("threads"), gl=canvas.getContext("webgl2",{alpha:true,premultipliedAlpha:true,antialias:false});
+  if(!gl) return;
+  const vs=`#version 300 es
+in vec2 p;void main(){gl_Position=vec4(p,0.,1.);}`;
+  const fs=`#version 300 es
+precision highp float;
+uniform vec2 R;uniform float T;uniform vec2 M;uniform float MA;
+uniform vec3 C1;uniform vec3 C2;uniform vec3 C3;
+out vec4 o;
+const float SPEED=.15,N=6.,FREQ=4.,SPREAD=.14,TAPER=.8,POS=.15,GLOW=.011,FALL=.62,THICK=1.,BRIGHT=.55,MS=.3,GRAIN=.04;
+void main(){
+  vec2 uv=gl_FragCoord.xy/R;
+  float px=mix(.5,M.x,MS*MA);
+  float amp0=SPREAD*abs(uv.x-px), mir=sign(px-uv.x), yOff=uv.y-POS;
+  vec3 col=vec3(0.);float gs=0.;
+  for(int k=0;k<10;k++){float i=float(k);if(i>=N)break;
+    float ph=(T*SPEED+i*6.2831853/N)*mir;
+    float sdf=abs(yOff+sin(uv.x*FREQ+ph)*amp0*(1.+i*TAPER))/THICK;
+    float g=GLOW/pow(max(sdf,1e-4),FALL);
+    col+=g*mix(C1,C2,i/(N-1.));gs+=g;}
+  col=mix(col,C3*gs,smoothstep(.5,2.2,gs)*.5);
+  vec2 md=uv-M;col*=BRIGHT+MS*MA*exp(-dot(md,md)*6.)*.6;
+  float a=clamp(gs,0.,1.);vec3 rgb=col*a;
+  float gv=(fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233))+T)*43758.5453)-.5)*GRAIN;
+  o=vec4(clamp(rgb+gv,0.,1.),clamp(a+gv,0.,1.));
+}`;
+  const sh=(t,s)=>{const x=gl.createShader(t);gl.shaderSource(x,s);gl.compileShader(x);return x};
+  const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,vs));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(pr);
+  if(!gl.getProgramParameter(pr,gl.LINK_STATUS)) return;
+  gl.useProgram(pr);
+  gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
+  const u=n=>gl.getUniformLocation(pr,n);
+  gl.uniform3f(u("C1"),1,1,1); gl.uniform3f(u("C2"),1,.86,.78); gl.uniform3f(u("C3"),1,1,1);
+  const resize=()=>{const d=Math.min(devicePixelRatio||1,2);canvas.width=canvas.clientWidth*d;canvas.height=canvas.clientHeight*d;gl.viewport(0,0,canvas.width,canvas.height);gl.uniform2f(u("R"),canvas.width,canvas.height)};
+  new ResizeObserver(resize).observe(canvas);resize();
+  const m=[.5,.5],tm=[.5,.5];let ma=0,tma=0;
+  const hero=canvas.parentElement;
+  hero.addEventListener("mousemove",e=>{const r=canvas.getBoundingClientRect();tm[0]=(e.clientX-r.left)/r.width;tm[1]=1-(e.clientY-r.top)/r.height;tma=1});
+  hero.addEventListener("mouseleave",()=>tma=0);
+  const still=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let raf=0,vis=true;const t0=performance.now();
+  const frame=t=>{m[0]+=.05*(tm[0]-m[0]);m[1]+=.05*(tm[1]-m[1]);ma+=.05*(tma-ma);
+    gl.uniform1f(u("T"),(t-t0)/1000);gl.uniform2f(u("M"),m[0],m[1]);gl.uniform1f(u("MA"),ma);
+    gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.drawArrays(gl.TRIANGLES,0,3);
+    raf=still?0:requestAnimationFrame(frame)};
+  new IntersectionObserver(([e])=>{vis=e.isIntersecting;if(vis&&!raf)raf=requestAnimationFrame(frame);if(!vis&&raf){cancelAnimationFrame(raf);raf=0}}).observe(canvas);
+})();
+</script>
+</body>
+</html>
