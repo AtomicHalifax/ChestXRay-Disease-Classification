@@ -1,6 +1,7 @@
-"""Download the 10 demo chest X-rays and generate "bad input" test images.
+"""Download the 20 demo chest X-rays and generate "bad input" test images.
 
     python scripts/fetch_samples.py            # -> samples/xray/, samples/bad_inputs/
+    python scripts/fetch_samples.py --site docs/samples   # also 512px JPEGs + samples.json for the website
 
 The X-rays come from Wikimedia Commons under CC0 / public domain / CC BY-SA
 (see samples/manifest.json and the generated samples/CREDITS.md). They are
@@ -10,8 +11,10 @@ Their "expected" finding is the uploader's description, not a verified label.
 
 from __future__ import annotations
 
+import argparse
 import io
 import json
+import time
 import urllib.request
 from pathlib import Path
 
@@ -23,10 +26,16 @@ SAMPLES = ROOT / "samples"
 UA = "chexpert-cls-sample-fetcher/1.0 (https://github.com/AtomicHalifax/ChestXRay-Disease-Classification)"
 
 
-def fetch(url: str) -> Image.Image:
+def fetch(url: str, tries: int = 4) -> Image.Image:
     req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return Image.open(io.BytesIO(r.read()))
+    for i in range(tries):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return Image.open(io.BytesIO(r.read()))
+        except Exception:  # Wikimedia rate-limits bursts (429); back off and retry
+            if i == tries - 1:
+                raise
+            time.sleep(5 * (i + 1))
 
 
 def make_bad_inputs(out: Path) -> None:
@@ -41,6 +50,9 @@ def make_bad_inputs(out: Path) -> None:
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--site", type=Path, help="also write 512px JPEGs + samples.json here (website)")
+    args = ap.parse_args()
     manifest = json.loads((SAMPLES / "manifest.json").read_text(encoding="utf-8"))
     xdir = SAMPLES / "xray"
     xdir.mkdir(parents=True, exist_ok=True)
@@ -52,9 +64,18 @@ def main() -> None:
             img.thumbnail((1024, 1024))
             img.save(dest)
             print(f"saved {dest.relative_to(ROOT)}  ({item['expected']})")
+            time.sleep(1)
         lic = f"[{item['license']}]({item['license_url']})" if item["license_url"] else item["license"]
         credits.append(f"- `{dest.name}`: [{item['title']}]({item['source_page']}) by {item['author']}, {lic}. "
                        "Converted to grayscale and resized.")
+    if args.site:
+        args.site.mkdir(parents=True, exist_ok=True)
+        for item in manifest["images"]:
+            img = Image.open(xdir / f"{item['id']}.png")
+            img.thumbnail((512, 512))
+            img.convert("RGB").save(args.site / f"{item['id']}.jpg", quality=85)
+        keep = ("id", "title", "author", "license", "source_page")
+        (args.site / "samples.json").write_text(json.dumps([{k: i[k] for k in keep} for i in manifest["images"]]))
     (SAMPLES / "CREDITS.md").write_text("\n".join(credits) + "\n", encoding="utf-8")
     make_bad_inputs(SAMPLES / "bad_inputs")
     print("bad inputs written to samples/bad_inputs/")
