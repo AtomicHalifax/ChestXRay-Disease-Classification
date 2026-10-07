@@ -1,0 +1,43 @@
+name: Website
+
+# Builds the static site in docs/ plus an ONNX export of the released model,
+# so the demo runs entirely in the visitor's browser (no server, no cost).
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**", "scripts/export_onnx.py", "src/chexpert_cls/model.py", "src/chexpert_cls/config.py", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -e . onnx onnxruntime
+      - name: Export model to ONNX (verified against PyTorch + Grad-CAM)
+        run: python scripts/export_onnx.py --out docs/model.onnx
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deploy
+        uses: actions/deploy-pages@v4
