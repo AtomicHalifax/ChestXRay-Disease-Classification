@@ -1,5 +1,5 @@
 {
-  "description": "10 openly licensed chest X-rays from Wikimedia Commons for demos and manual testing. 'expected' is the finding described by the uploader, not a radiologist-verified label; these are NOT a benchmark.",
+  "description": "20 openly licensed chest X-rays from Wikimedia Commons for demos and manual testing. 'expected' is the finding described by the uploader, not a radiologist-verified label; these are NOT a benchmark.",
   "images": [
     {
       "id": "normal_pa_1",
@@ -100,6 +100,106 @@
       "author": "Unknown (public domain)",
       "source_page": "https://commons.wikimedia.org/wiki/File:Pneumonia_x_ray.jpg",
       "url": "https://upload.wikimedia.org/wikipedia/commons/0/01/Pneumonia_x_ray.jpg"
+    },
+    {
+      "id": "consolidation_2",
+      "title": "X-ray lung consolidation.jpg",
+      "expected": "Consolidation",
+      "license": "CC BY 2.0",
+      "license_url": "https://creativecommons.org/licenses/by/2.0",
+      "author": "Malvinder S Parmar (BMC Infectious Diseases 2005, 5:30)",
+      "source_page": "https://commons.wikimedia.org/wiki/File:X-ray_lung_consolidation.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/5/53/X-ray_lung_consolidation.jpg"
+    },
+    {
+      "id": "influenza_pneumonia",
+      "title": "Chest X-ray in influenza and Haemophilus influenzae.jpg",
+      "expected": "Pneumonia",
+      "license": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "author": "Mikael Häggström",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Chest_X-ray_in_influenza_and_Haemophilus_influenzae.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/2/20/Chest_X-ray_in_influenza_and_Haemophilus_influenzae.jpg"
+    },
+    {
+      "id": "ards",
+      "title": "ARDS X-Ray.jpg",
+      "expected": "ARDS (bilateral opacities)",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "author": "Samir",
+      "source_page": "https://commons.wikimedia.org/wiki/File:ARDS_X-Ray.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/b/b1/ARDS_X-Ray.jpg"
+    },
+    {
+      "id": "pneumothorax",
+      "title": "09-01-Pneumothorax.png",
+      "expected": "Pneumothorax",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "author": "Hellerhoff",
+      "source_page": "https://commons.wikimedia.org/wiki/File:09-01-Pneumothorax.png",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/2/25/09-01-Pneumothorax.png"
+    },
+    {
+      "id": "tuberculosis",
+      "title": "Tuberculosis-x-ray.jpg",
+      "expected": "Tuberculosis",
+      "license": "Public domain",
+      "license_url": "",
+      "author": "CDC",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Tuberculosis-x-ray.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Tuberculosis-x-ray.jpg"
+    },
+    {
+      "id": "miliary_tb",
+      "title": "Chest radiograph of miliary tuberculosis 1.jpg",
+      "expected": "Miliary tuberculosis",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0",
+      "author": "Benjamín Herreros et al.",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Chest_radiograph_of_miliary_tuberculosis_1.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/6/6c/Chest_radiograph_of_miliary_tuberculosis_1.jpg"
+    },
+    {
+      "id": "copd_ap",
+      "title": "X-ray of COPD exacerbation - anteroposterior view.jpg",
+      "expected": "COPD exacerbation",
+      "license": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "author": "Mikael Häggström",
+      "source_page": "https://commons.wikimedia.org/wiki/File:X-ray_of_COPD_exacerbation_-_anteroposterior_view.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/3/36/X-ray_of_COPD_exacerbation_-_anteroposterior_view.jpg"
+    },
+    {
+      "id": "lung_mass",
+      "title": "Chest x-ray (cancer).jpg",
+      "expected": "Lung mass",
+      "license": "Public domain",
+      "license_url": "",
+      "author": "Unknown photographer",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Chest_x-ray_(cancer).jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/4/4e/Chest_x-ray_%28cancer%29.jpg"
+    },
+    {
+      "id": "normal_3",
+      "title": "Chest X-ray 2346.jpg",
+      "expected": "No Finding",
+      "license": "CC0",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "author": "Doctoroftcm",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Chest_X-ray_2346.jpg",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/8/83/Chest_X-ray_2346.jpg"
+    },
+    {
+      "id": "normal_ap",
+      "title": "Normal AP.JPG",
+      "expected": "No Finding",
+      "license": "CC BY 3.0",
+      "license_url": "https://creativecommons.org/licenses/by/3.0",
+      "author": "James Heilman, MD",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Normal_AP.JPG",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/8/8d/Normal_AP.JPG"
     }
   ]
 }
