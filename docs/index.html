@@ -156,7 +156,7 @@ footer ul{margin-top:10px;padding-left:18px}
   <div class="wrap">
     <div class="kicker">Live demo</div>
     <h2 class="serif">Drag an X-ray in. Get a second look.</h2>
-    <p class="sub">Pick one of the ten sample films below, drag it into the box, or upload your own. Images go to the API on AWS and aren't stored.</p>
+    <p class="sub">Pick one of the ten sample films below, drag it into the box, or upload your own. The model runs in your browser — your image never leaves your device.</p>
 
     <div class="demo">
       <div class="card">
@@ -196,7 +196,7 @@ footer ul{margin-top:10px;padding-left:18px}
       <div class="stat"><div class="n serif">0.879</div><p>mean AUROC on the 234-image CheXpert validation set</p></div>
       <div class="stat"><div class="n serif">159K</div><p>training radiographs (U-Ignore policy)</p></div>
       <div class="stat"><div class="n serif">5</div><p>findings: Atelectasis, Cardiomegaly, Consolidation, Edema, Pleural Effusion</p></div>
-      <div class="stat"><div class="n serif">~0.1s</div><p>per image on a 2-vCPU AWS server, no GPU</p></div>
+      <div class="stat"><div class="n serif">&lt;1s</div><p>per image, computed in your browser — no server, no GPU</p></div>
     </div>
     <p class="honest">The best epoch was picked on that same validation set, so 0.879 is optimistic (it ranged 0.854–0.879 across epochs 6–10). On outside images from other hospitals the model does noticeably worse — which is why the service checks every input and watches for drift.</p>
   </div>
@@ -209,7 +209,7 @@ footer ul{margin-top:10px;padding-left:18px}
     <div class="steps">
       <div class="step"><h3>Train &amp; track</h3><p>PyTorch training with patient-level splits, logged to MLflow. Weights versioned on Hugging Face and pinned by SHA-256.</p></div>
       <div class="step"><h3>Gate before release</h3><p>CI runs tests and a quality gate: a new model can't ship if AUROC drops against the baseline.</p></div>
-      <div class="step"><h3>Ship as a container</h3><p>FastAPI in Docker, published to GHCR on every release tag and running on AWS EC2 behind HTTPS.</p></div>
+      <div class="step"><h3>Ship as a container</h3><p>FastAPI in Docker, published to GHCR on every release tag. For this page the same weights are exported to ONNX (checked against PyTorch in CI) and run in your browser.</p></div>
       <div class="step"><h3>Guard the input</h3><p>Colour photos, tiny images and odd shapes are flagged before anyone trusts the answer.</p></div>
       <div class="step"><h3>Explain</h3><p>Grad-CAM shows where the evidence came from — and when the model is looking at the wrong thing.</p></div>
       <div class="step"><h3>Monitor drift</h3><p>Prometheus + Grafana track latency, errors and a PSI drift score comparing live predictions with validation.</p></div>
@@ -226,8 +226,8 @@ footer ul{margin-top:10px;padding-left:18px}
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
 <script>
-const API = "https://13-237-113-178.sslip.io";
 const FINDINGS = ["Atelectasis","Cardiomegaly","Consolidation","Edema","Pleural Effusion"];
 const SAMPLES = [
  ["normal_pa_1","No Finding","Mikael Häggström","CC0","https://commons.wikimedia.org/wiki/File:Normal_posteroanterior_(PA)_chest_radiograph_(X-ray).jpg","https://upload.wikimedia.org/wikipedia/commons/a/a1/Normal_posteroanterior_%28PA%29_chest_radiograph_%28X-ray%29.jpg"],
@@ -245,7 +245,7 @@ const SAMPLES = [
 const $ = id => document.getElementById(id);
 
 // ---- logo loop (tech stack) ----
-const STACK = ["PyTorch","DenseNet121","FastAPI","Docker","GitHub Actions","MLflow","Hugging Face","AWS EC2","Caddy · HTTPS","Prometheus","Grafana","Grad-CAM","pytest"];
+const STACK = ["PyTorch","DenseNet121","FastAPI","Docker","GitHub Actions","MLflow","Hugging Face","ONNX Runtime Web","GitHub Pages","Prometheus","Grafana","Grad-CAM","pytest"];
 $("loopTrack").innerHTML = [...STACK,...STACK].map(s=>`<span>${s}</span>`).join("");
 
 // ---- sample tray + credits ----
@@ -277,54 +277,92 @@ async function useSample(i){
   }catch{ setStatus("Couldn't load that sample. Try another one or upload your own."); }
 }
 
-// ---- prediction ----
-let current=null, selected=null, camCache={};
+// ---- prediction: runs in the browser (ONNX Runtime Web), nothing is uploaded ----
+const MEAN=[0.485,0.456,0.406], STD=[0.229,0.224,0.225], S=224;
+let current=null, selected=null, last=null, session=null;
 function setStatus(h){$("status").innerHTML=h}
+async function getSession(){
+  if(!session){
+    setStatus(`<span class="spin"></span>Loading the model into your browser (≈28 MB, first time only)…`);
+    session=await ort.InferenceSession.create("model.onnx",{executionProviders:["wasm"]});
+  }
+  return session;
+}
+function canvas(w,h){const c=document.createElement("canvas");c.width=w;c.height=h;return c}
+
+// same checks as chexpert_cls.validation.image_warnings
+function inputWarnings(bmp){
+  const w=bmp.width,h=bmp.height,out=[];
+  if(Math.min(w,h)<128) out.push(`image is small (${w}x${h}); model was trained on >=320px films`);
+  if(w/h<0.5||w/h>2) out.push(`unusual aspect ratio ${(w/h).toFixed(2)}`);
+  const k=Math.min(1,256/Math.max(w,h)), c=canvas(Math.max(1,Math.round(w*k)),Math.max(1,Math.round(h*k))), x=c.getContext("2d");
+  x.drawImage(bmp,0,0,c.width,c.height);
+  const d=x.getImageData(0,0,c.width,c.height).data; let sum=0;
+  for(let i=0;i<d.length;i+=4) sum+=Math.max(d[i],d[i+1],d[i+2])-Math.min(d[i],d[i+1],d[i+2]);
+  const spread=sum/(d.length/4);
+  if(spread>12) out.push(`image looks colour (spread ${spread.toFixed(1)}); chest X-rays are grayscale`);
+  return out;
+}
 
 async function run(file,sample){
-  current=file; camCache={};
+  current=file; last=null;
   $("placeholder").style.display="none";
   $("imgOrig").src=URL.createObjectURL(file);
   $("imgCam").removeAttribute("src");
   view("orig");
   $("bars").innerHTML=""; $("warn").style.display="none"; $("latency").textContent="";
   $("expected").textContent = sample ? `Sample label (from the uploader's description): ${sample.expected}` : "";
-  setStatus(`<span class="spin"></span>Running the model…`);
-  const fd=new FormData(); fd.append("file",file);
   try{
-    const r=await fetch(API+"/predict",{method:"POST",body:fd});
-    const j=await r.json();
-    if(!r.ok) throw new Error(j.detail||r.statusText);
+    const bmp=await createImageBitmap(file);
+    const s=await getSession();
+    setStatus(`<span class="spin"></span>Running the model…`);
+    const c=canvas(S,S), x=c.getContext("2d"); x.imageSmoothingQuality="high"; x.drawImage(bmp,0,0,S,S);
+    const px=x.getImageData(0,0,S,S).data, t=new Float32Array(3*S*S);
+    for(let i=0;i<S*S;i++) for(let ch=0;ch<3;ch++) t[ch*S*S+i]=(px[i*4+ch]/255-MEAN[ch])/STD[ch];
+    const t0=performance.now();
+    const out=await s.run({image:new ort.Tensor("float32",t,[1,3,S,S])});
+    const ms=performance.now()-t0;
     if(file!==current) return;
-    setStatus(`Top finding: <strong>${j.top_finding}</strong> · tap a finding to see its heatmap`);
-    $("latency").textContent=`${Math.round(j.latency_ms)} ms on CPU`;
-    if(j.warnings&&j.warnings.length){$("warn").style.display="block";$("warn").textContent="Input check: "+j.warnings.join("; ")}
-    $("bars").innerHTML=FINDINGS.map(f=>`<button class="bar" data-f="${f}"><span>${f}</span><span class="track"><span class="fill"></span></span><b>${Math.round(j.findings[f]*100)}%</b></button>`).join("");
-    requestAnimationFrame(()=>document.querySelectorAll(".bar").forEach(b=>b.querySelector(".fill").style.width=(j.findings[b.dataset.f]*100)+"%"));
-    explain(j.top_finding);
+    const probs=Object.fromEntries(FINDINGS.map((f,i)=>[f,out.probs.data[i]]));
+    const top=FINDINGS.reduce((a,b)=>probs[a]>=probs[b]?a:b);
+    last={bmp,cams:out.cams.data,cache:{}};
+    setStatus(`Top finding: <strong>${top}</strong> · tap a finding to see its heatmap`);
+    $("latency").textContent=`${Math.round(ms)} ms in your browser`;
+    const w=inputWarnings(bmp);
+    if(w.length){$("warn").style.display="block";$("warn").textContent="Input check: "+w.join("; ")}
+    $("bars").innerHTML=FINDINGS.map(f=>`<button class="bar" data-f="${f}"><span>${f}</span><span class="track"><span class="fill"></span></span><b>${Math.round(probs[f]*100)}%</b></button>`).join("");
+    requestAnimationFrame(()=>document.querySelectorAll(".bar").forEach(b=>b.querySelector(".fill").style.width=(probs[b.dataset.f]*100)+"%"));
+    explain(top);
   }catch(err){
-    setStatus(`The API didn't answer (${err.message}). It may be paused to save credits — try again in a minute.`);
+    setStatus(`Couldn't run the model (${err.message||err}). Try a PNG or JPG, or reload the page.`);
   }
 }
 
 $("bars").addEventListener("click",e=>{const b=e.target.closest(".bar");if(b)explain(b.dataset.f)});
 
-async function explain(f){
+// Grad-CAM: for DenseNet's GAP+linear head it equals the class activation map baked into the ONNX graph
+function jet(v){const c=t=>Math.round(255*Math.min(1,Math.max(0,1.5-Math.abs(4*v-t))));return[c(3),c(2),c(1)]}
+function explain(f){
+  if(!last) return;
   selected=f;
   document.querySelectorAll(".bar").forEach(b=>b.classList.toggle("sel",b.dataset.f===f));
-  if(!camCache[f]){
-    const file=current, fd=new FormData(); fd.append("file",file);
-    $("vCam").textContent="Grad-CAM…";
-    try{
-      const r=await fetch(`${API}/explain?finding=${encodeURIComponent(f)}`,{method:"POST",body:fd});
-      if(!r.ok) throw 0;
-      const url=URL.createObjectURL(await r.blob());
-      if(file!==current) return;
-      camCache[f]=url;
-    }catch{ $("vCam").textContent="Grad-CAM"; return; }
+  if(!last.cache[f]){
+    const k=FINDINGS.indexOf(f), m=last.cams.slice(k*49,k*49+49);
+    let lo=Math.min(...m), hi=Math.max(...m);
+    const small=canvas(7,7), sx=small.getContext("2d"), id=sx.createImageData(7,7);
+    for(let i=0;i<49;i++){const v=hi>lo?(m[i]-lo)/(hi-lo):0; id.data.set([v*255,v*255,v*255,255],i*4)}
+    sx.putImageData(id,0,0);
+    const sc=Math.min(1,512/Math.max(last.bmp.width,last.bmp.height));
+    const W=Math.round(last.bmp.width*sc), H=Math.round(last.bmp.height*sc);
+    const heat=canvas(W,H), hx=heat.getContext("2d"); hx.imageSmoothingEnabled=true; hx.drawImage(small,0,0,W,H);
+    const hv=hx.getImageData(0,0,W,H);
+    const out=canvas(W,H), ox=out.getContext("2d"); ox.drawImage(last.bmp,0,0,W,H);
+    const o=ox.getImageData(0,0,W,H);
+    for(let i=0;i<o.data.length;i+=4){const [r,g,b]=jet(hv.data[i]/255);o.data[i]=.6*o.data[i]+.4*r;o.data[i+1]=.6*o.data[i+1]+.4*g;o.data[i+2]=.6*o.data[i+2]+.4*b}
+    ox.putImageData(o,0,0);
+    last.cache[f]=out.toDataURL("image/jpeg",0.9);
   }
-  if(selected!==f) return;
-  $("imgCam").src=camCache[f]; $("imgCam").alt=`Grad-CAM heatmap for ${f}`;
+  $("imgCam").src=last.cache[f]; $("imgCam").alt=`Grad-CAM heatmap for ${f}`;
   $("vCam").textContent=`Grad-CAM · ${f}`;
   view("cam");
 }
