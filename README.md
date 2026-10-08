@@ -1,11 +1,16 @@
 # Chest X-ray Finding Classification (CheXpert, DenseNet121)
 
+**[Live demo →](https://atomichalifax.github.io/ChestXRay-Disease-Classification/)** · [MLOps write-up](MLOPS.md) · [Model weights](https://huggingface.co/AtomicHalifax/ChestXRay-DenseNet121)
+
 [![CI](https://github.com/AtomicHalifax/ChestXRay-Disease-Classification/actions/workflows/ci.yml/badge.svg)](https://github.com/AtomicHalifax/ChestXRay-Disease-Classification/actions/workflows/ci.yml)
+[![Website](https://github.com/AtomicHalifax/ChestXRay-Disease-Classification/actions/workflows/pages.yml/badge.svg)](https://atomichalifax.github.io/ChestXRay-Disease-Classification/)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-A multi-label classifier for five chest X-ray findings: **Atelectasis, Cardiomegaly, Consolidation, Edema, Pleural Effusion**. It uses a DenseNet121 fine-tuned on Stanford CheXpert, with Grad-CAM explanations, a training and evaluation CLI, a Gradio demo, and CI.
+A multi-label classifier for five chest X-ray findings: **Atelectasis, Cardiomegaly, Consolidation, Edema, Pleural Effusion**. It uses a DenseNet121 fine-tuned on 159,329 Stanford CheXpert images, with Grad-CAM explanations, wrapped in a full MLOps pipeline: data validation, experiment tracking, a quality gate that blocks worse models, drift monitoring, a hardened API, CI/CD, and a browser build checked against PyTorch before every release.
+
+The demo runs the model in your browser (ONNX), so images never leave your device. The page also shows the live CI/CD status and the model card.
 
 <img width="1672" height="941" alt="Project overview" src="https://github.com/user-attachments/assets/1c646a7c-247d-4e5e-910a-8df9b88fa4a8" />
 
@@ -47,7 +52,7 @@ pip install -e ".[demo]"
 # Predict on your own image (weights auto-download from Hugging Face)
 python -m chexpert_cls.predict xray.jpg --gradcam out/
 
-# Local web demo with Grad-CAM
+# Local Gradio demo with Grad-CAM
 python app.py
 ```
 
@@ -72,6 +77,8 @@ curl -F file=@xray.jpg -o cam.png "localhost:8000/explain?finding=Edema"
 
 ## MLOps
 
+Full write-up: **[MLOPS.md](MLOPS.md)**.
+
 ```
  train.csv ──► validate_csv ──► train.py ──► MLflow (params, metrics, best.pth)
                                    │
@@ -83,6 +90,7 @@ curl -F file=@xray.jpg -o cam.png "localhost:8000/explain?finding=Edema"
                                    │
  git push ──► CI: ruff + pytest + gate ──► docker build ──► container smoke test
           └─► promtool: check config + unit-test alert rules
+          └─► Website: ONNX export ──► parity check ──► GitHub Pages
  git tag v* ──► Release: build image (weights baked in) ──► ghcr.io/<owner>/chexpert-api
                                    │
                                    ▼
@@ -97,7 +105,9 @@ curl -F file=@xray.jpg -o cam.png "localhost:8000/explain?finding=Edema"
 - **Quality gate:** `python -m chexpert_cls.gate --candidate <report>` fails if mean AUROC drops more than 0.01, or any finding drops more than 0.03, against the committed baseline. CI runs it automatically when `models/candidate_metrics.json` is committed.
 - **Drift detection:** the API keeps the last 500 predictions and compares each finding's probability distribution with the validation set, using the Population Stability Index (PSI). It's exposed at `/drift` and as the `chexpert_drift_psi` metric. Build the reference with `python -m chexpert_cls.drift --predictions results/valid_predictions.npz`.
 - **Monitoring:** `docker compose up` also starts Prometheus (:9090) and Grafana (:3000), with a pre-built dashboard covering traffic, error ratio, p50/p95 latency, mean prediction per finding and drift. Four alert rules (API down, error rate >10%, p95 latency >2 s, PSI >0.25) are checked and unit-tested with `promtool` in CI.
-- **CI/CD:** every push runs lint, unit and API tests, builds the image and smoke-tests the container. A `v*` tag publishes the image to GHCR.
+- **CI/CD:** every push runs lint, unit and API tests, builds the image and smoke-tests the container. A `v*` tag publishes the image to GHCR. Dependabot opens weekly update PRs, gated by CI.
+- **Browser release:** `pages.yml` exports the model to ONNX, checks it against PyTorch and Grad-CAM, and deploys the [website](https://atomichalifax.github.io/ChestXRay-Disease-Classification/).
+- **Security:** PNG/JPEG only, 10 MB read cap, decompression-bomb guard, 30 POSTs/min per IP, CORS locked to the site + localhost, no secrets in the repo. Details in [MLOPS.md](MLOPS.md#10-security).
 
 - **Batch drift check + external validation:** before trusting the model on a new dataset, run `python -m chexpert_cls.drift_check new_images/`. It reports input-quality problems, PSI drift per finding, and, given labels (a generic CSV or NIH ChestX-ray14 format), AUROC with 95% CIs on that dataset. `--fail-on-shift` makes it exit non-zero on a major shift.
 
@@ -106,7 +116,7 @@ A plain-language walkthrough of the whole project is in [`docs/HOW_IT_WORKS.md`]
 ### Try it with sample images
 
 ```bash
-make samples          # 10 openly licensed chest X-rays (Wikimedia Commons) + 4 deliberately bad inputs
+make samples          # 20 openly licensed chest X-rays (Wikimedia Commons) + 4 deliberately bad inputs
 python -m chexpert_cls.drift_check samples/xray/
 for f in samples/xray/*.png samples/bad_inputs/*; do curl -s -F file=@$f localhost:8000/predict; echo; done
 ```
@@ -147,16 +157,18 @@ src/chexpert_cls/   config, data (label policies, patient split), validation, mo
                     predict, gradcam, metrics, gate (quality gate), drift (PSI), drift_check (batch drift +
                     external validation), api (FastAPI service)
 models/             baseline_metrics.json (gate baseline); drift_reference.json once built
-app.py              Gradio demo (Hugging Face Space ready)
+app.py              Gradio demo (local)
 tests/              pytest: labels, patient split, metrics, validation, model, Grad-CAM, API contract
 Dockerfile          CPU inference image (non-root, healthcheck, optional baked weights)
 docker-compose.yml  API + MLflow + Prometheus + Grafana
 monitoring/         Prometheus config, alert rules + their unit tests, Grafana dashboard
-scripts/            fetch_samples, make_test_set
+scripts/            fetch_samples, make_test_set, export_onnx (browser model + parity check)
 samples/            manifest.json of demo images (images themselves are downloaded, not committed)
-.github/workflows/  ci.yml (lint, tests, docker smoke test), release.yml (publish image to GHCR)
+docs/index.html     the website (GitHub Pages)
+.github/workflows/  ci.yml (lint, tests, docker smoke test), pages.yml (ONNX + website), release.yml (GHCR image)
+.github/dependabot.yml  weekly dependency update PRs
 notebooks/          original exploration (00) and evaluation (01); 02 = Colab retrain + external validation
-docs/               dataset, architecture, training, evaluation and limitations notes
+docs/               website, plus dataset, architecture, training, evaluation and limitations notes
 images/             evaluation figures
 ```
 
@@ -171,10 +183,12 @@ More detail is in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
 
 ## Next steps
 
+- [x] Live website with in-browser inference and live pipeline status
 - [ ] Retrain with v1.1 protocol and report CIs
 - [ ] U-Ones vs U-Ignore ablation, 320 px input
 - [ ] Run notebook 02: v1.1 retrain + NIH ChestX-ray14 external validation
 - [ ] Per-finding calibration (temperature scaling) and operating points
+- [ ] int8 browser model with the same parity check
 
 ## References
 
@@ -182,6 +196,6 @@ More detail is in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md).
 - Huang et al. *Densely Connected Convolutional Networks.* CVPR 2017.
 - Selvaraju et al. *Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization.* ICCV 2017.
 
-Built by **Athrva Raval** (BSc Data Science & AI, IIT Guwahati). [LinkedIn](https://www.linkedin.com/in/athrva-raval/)
+Built by **Athrva Raval** (BSc Data Science & AI, IIT Guwahati). [Website](https://atomichalifax.github.io/ChestXRay-Disease-Classification/) · [LinkedIn](https://www.linkedin.com/in/athrva-raval/)
 
 MIT License. CheXpert data is subject to Stanford's own research-use agreement.

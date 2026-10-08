@@ -26,12 +26,16 @@ app.py             Gradio demo (local only)
 tests/             pytest; torch/fastapi tests use importorskip and CHEXPERT_RANDOM_WEIGHTS=1
 models/            baseline_metrics.json (gate baseline); drift_reference.json (not built yet; needs real eval)
 monitoring/        prometheus.yml, alerts.yml, alerts_test.yml (promtool unit tests), Grafana provisioning + dashboard
-scripts/           fetch_samples.py (10 Wikimedia CXRs + bad inputs), make_test_set.py (private CheXpert subset)
+scripts/           fetch_samples.py (20 Wikimedia CXRs + bad inputs; --site writes docs/samples), export_onnx.py (browser model
+                   with baked Grad-CAM, asserts parity with PyTorch), make_test_set.py (private CheXpert subset)
 samples/           manifest.json only; downloaded images are git-ignored
 Dockerfile         CPU torch, non-root, healthcheck, ARG BAKE_WEIGHTS=1 bakes weights in
 docker-compose.yml api :8000, mlflow :5000, prometheus :9090, grafana :3000
 .github/workflows  ci.yml (test: ruff+pytest+gate | monitoring: promtool | docker: build + container smoke test)
-                   release.yml (tag v* → ghcr.io/<owner>/chexpert-api)
+                   pages.yml (ONNX export + parity check + samples → GitHub Pages), release.yml (tag v* → ghcr.io/<owner>/chexpert-api)
+.github/dependabot.yml  weekly pip / actions / docker update PRs
+docs/index.html    the website (vanilla HTML/JS, ONNX Runtime Web, live pipeline from the public GitHub API)
+MLOPS.md           recruiter-facing MLOps write-up incl. security checklist
 docs/HOW_IT_WORKS.md  plain-language walkthrough for the owner's interview prep
 notebooks/         original v1.0 training (00) and evaluation (01), historical; 02 = Colab retrain + NIH external validation
 ```
@@ -71,18 +75,20 @@ python -m chexpert_cls.drift --predictions results/valid_predictions.npz
 - Hugging Face Hub is used **only for weight storage**. No HF Spaces.
 - Demo images: Wikimedia Commons (CC0/PD/CC BY-SA, credited, fetched on demand). Never publish CheXpert images (research-only licence). NIH ChestX-ray14 is the external test set.
 - The owner doesn't expect real live traffic soon. Batch drift check + external validation matter more for the portfolio than live monitoring.
-- No paid domain. The website will be free: frontend on GitHub Pages (`atomichalifax.github.io/...`), API on a free container host (to be chosen; free tiers are tight on RAM for torch).
-- The website is built **last**, after the MLOps work.
+- No paid domain, everything free. Website: https://atomichalifax.github.io/ChestXRay-Disease-Classification/ (owner chose to keep this URL). Inference runs in the browser via ONNX, so there is no hosted API. AWS was dropped.
+- Website: white, MLOps-first. No "only five diseases" wording, no "runs 100% in your browser" tagline, no visitor counter, no run-history bars.
+- API security: PNG/JPEG only, capped read, pixel limit, per-IP rate limit, CORS locked (env-configurable). Keep these; tests cover them.
 - The owner wants the MLOps built for him, and needs to understand it for interviews. Keep `docs/HOW_IT_WORKS.md` updated in plain language.
 
-## Status (v1.4)
+## Status (v1.4 + website)
 
 Done and green in CI: package, tests, API (`/health /version /predict /explain /drift /metrics`), input guard, CSV validation, MLflow hooks, SHA-256 weight pinning, Docker + smoke test, quality gate, PSI drift monitor, batch drift check / external validation, Prometheus alert rules with unit tests (visible in the Prometheus UI; no notifications — Alertmanager/email was removed because there's no real traffic), Grafana dashboard, release workflow (v1.4.0 published, GHCR image built).
 
-Written but never run with real data or weights: notebook 02 (MLflow, real CSV validation, gate on real metrics, drift reference, NIH external validation), the API with real weights, fetch_samples.py downloads.
+Also done: API run locally with real weights (SHA-256 starts 7d88ee05), website live with in-browser inference, live pipeline status, model card, Dependabot.
+
+Written but never run with real data: notebook 02 (MLflow, real CSV validation, gate on real metrics, drift reference, NIH external validation).
 
 Next:
-1. Owner runs `docker compose up` locally with real weights and records the SHA-256.
-2. Run notebook 02 on Colab; bring back candidate_metrics.json, drift_reference.json, the NIH report; update README/baseline/`MODEL_VERSION`.
-3. Release tags: v1.4.0 created for this version.
-4. Website (GitHub Pages + free API host), custom UI.
+1. Run notebook 02 on Colab; bring back candidate_metrics.json, drift_reference.json, the NIH report; update README/baseline/`MODEL_VERSION`.
+2. Per-finding thresholds + calibration.
+3. int8 browser model with the same parity gate.
