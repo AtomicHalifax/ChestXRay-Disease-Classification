@@ -46,6 +46,7 @@ nav{display:flex;justify-content:space-between;align-items:center;padding:22px 0
 .hero{padding:64px 0 40px;text-align:center}
 h1{font-size:clamp(46px,8vw,92px);line-height:1;letter-spacing:-.02em;max-width:880px;margin:0 auto}
 h1 em{color:var(--accent)}
+.ask{display:inline-block;font-size:15px;font-weight:500;color:var(--accent);background:rgba(255,255,255,.75);border-radius:999px;padding:7px 16px;margin-bottom:24px}
 .lead{max-width:600px;margin:24px auto 34px;font-size:19px;color:var(--muted)}
 .cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 
@@ -175,6 +176,35 @@ body{padding-bottom:96px}
 .tl-steps li.done{opacity:.6}.tl-steps li.done i{width:auto;height:auto;background:none;animation:none;font-style:normal;color:#16a34a}
 .tl-steps li.done i::before{content:"✓"}
 
+/* ---------- live pipeline (GitHub Actions API) ---------- */
+#pipeline{background:var(--tint);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.runmeta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:28px;font-size:14px;color:var(--muted)}
+.runmeta b{color:var(--ink);font-weight:600}
+.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:0;margin-top:22px;position:relative}
+.stage{position:relative;padding:18px 14px 16px;background:#fff;border:1px solid var(--line);border-radius:14px;margin:0 7px}
+.stage:not(:last-child)::after{content:"";position:absolute;top:50%;right:-15px;width:16px;height:2px;background:repeating-linear-gradient(90deg,var(--accent) 0 4px,transparent 4px 8px);background-size:8px 2px;animation:flowdash .6s linear infinite}
+@keyframes flowdash{to{background-position:8px 0}}
+.stage .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#cbd5e1;margin-right:7px;vertical-align:1px}
+.stage.success .dot{background:#16a34a}.stage.failure .dot{background:#dc2626}.stage.running .dot{background:#f59e0b;animation:breath 1s infinite}
+.stage h4{display:inline;font-size:14px;font-weight:600}
+.stage p{margin-top:8px;font:500 13px "JetBrains Mono",monospace;color:var(--soft)}
+.stage small{display:block;margin-top:2px;font-size:12px;color:var(--soft)}
+.hist{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:end;margin-top:30px;font-size:13px;color:var(--muted)}
+.bars2{display:flex;align-items:flex-end;gap:5px;height:44px}
+.bars2 a{flex:1;max-width:26px;border-radius:4px 4px 1px 1px;background:#16a34a;opacity:.85;min-height:4px}
+.bars2 a.failure{background:#dc2626}.bars2 a.running{background:#f59e0b}.bars2 a:hover{opacity:1}
+.pnote{margin-top:18px;font-size:13px;color:var(--soft)}
+@media (max-width:860px){.flow{grid-template-columns:1fr 1fr;gap:12px 0}.stage:not(:last-child)::after{display:none}}
+
+/* ---------- model card ---------- */
+.mcard{display:grid;grid-template-columns:200px 1fr;margin-top:40px;border-top:1px solid var(--line)}
+.mcard dt,.mcard dd{padding:16px 0;border-bottom:1px solid var(--line)}
+.mcard dt{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.mcard dd{margin:0;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chips span{font:500 13px "JetBrains Mono",monospace;background:var(--tint);border:1px solid var(--line);border-radius:8px;padding:4px 9px;color:var(--ink)}
+@media (max-width:860px){.mcard{grid-template-columns:1fr}.mcard dt{border-bottom:0;padding-bottom:0}}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -194,12 +224,13 @@ body{padding-bottom:96px}
 <div class="wrap">
   <nav>
     <a class="logo" href="#"><i></i>CXR Reader</a>
-    <div class="navlinks"><a href="#demo">Demo</a><a href="#how">How it works</a><a href="#faq">FAQ</a><a href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification">GitHub</a></div>
+    <div class="navlinks"><a href="#demo">Demo</a><a href="#pipeline">Pipeline</a><a href="#model-card">Model card</a><a href="#faq">FAQ</a><a href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification">GitHub</a></div>
   </nav>
   <div class="hero">
-    <h1 class="serif">See what the <em>model</em> sees.</h1>
-    <p class="lead">Drop a chest X-ray. A DenseNet121 trained on 159,329 radiographs reads it on your device and shows where its evidence came from.</p>
-    <div class="cta"><a class="btn primary" href="#demo">Try the demo</a><a class="btn" href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification">View the code</a></div>
+    <p class="ask">What happens to a model after training?</p>
+    <h1 class="serif">159,329 X-rays. <em>One</em> pipeline.</h1>
+    <p class="lead">A DenseNet121 reads chest X-rays and shows its evidence. The real work is everything after training: tests, a quality gate that blocks worse models, drift monitoring, and a browser build checked against PyTorch before every release.</p>
+    <div class="cta"><a class="btn primary" href="#pipeline">See the live pipeline</a><a class="btn" href="#demo">Try the demo</a></div>
   </div>
 </div>
 </header>
@@ -260,6 +291,35 @@ body{padding-bottom:96px}
   </div>
 </section>
 
+<section id="pipeline">
+  <div class="wrap">
+    <div class="kicker">Live pipeline</div>
+    <h2 class="serif">Every change goes through this. Live.</h2>
+    <p class="sub">Pulled from GitHub Actions each time this page loads: the latest test run and the latest release of this site, stage by stage.</p>
+    <div class="runmeta" id="runmeta">Loading the latest runs…</div>
+    <div class="flow" id="flow"></div>
+    <div class="hist" id="hist"></div>
+    <p class="pnote">Green passed · red failed · amber running. Click a bar to open that run.</p>
+  </div>
+</section>
+
+<section id="model-card">
+  <div class="wrap">
+    <div class="kicker">Model card</div>
+    <h2 class="serif">What this model is — and isn't.</h2>
+    <dl class="mcard">
+      <dt>Model</dt><dd>DenseNet121 initialised from ImageNet, multi-label sigmoid head. 224 × 224 input, ImageNet normalisation. Exported to ONNX for in-browser inference; Grad-CAM baked into the graph.</dd>
+      <dt>Training data</dt><dd>Stanford CheXpert: 159,329 frontal and lateral radiographs after dropping uncertain labels (U-Ignore). Labels were extracted from reports by an NLP labeller, so they're noisy.</dd>
+      <dt>Training</dt><dd>BCE with per-class positive weights, Adam 1e-4, 10 epochs, batch 32, one Colab T4 GPU (~4.5 h). Tracked in MLflow.</dd>
+      <dt>Evaluation</dt><dd>Mean AUROC 0.879 on the 234-image CheXpert validation set (radiologist consensus labels).
+        <div class="chips"><span>Atelectasis 0.818</span><span>Cardiomegaly 0.855</span><span>Consolidation 0.897</span><span>Edema 0.906</span><span>Pleural Effusion 0.919</span></div></dd>
+      <dt>Intended use</dt><dd>Research, education and demonstrating MLOps practice. Not a medical device; never for diagnosis or treatment decisions.</dd>
+      <dt>Limitations</dt><dd>Single-hospital training data, mostly adult inpatients. The checkpoint was selected on the validation set, so reported AUROC is likely optimistic. Performance drops on images from other hospitals, and Grad-CAM can highlight tubes or markers.</dd>
+      <dt>Versioning</dt><dd>Weights on Hugging Face, pinned by SHA-256 (<code>7d88ee05…</code>); the server refuses to start with any other file.</dd>
+    </dl>
+  </div>
+</section>
+
 <section id="faq">
   <div class="wrap">
     <div class="kicker">FAQ</div>
@@ -295,7 +355,7 @@ body{padding-bottom:96px}
   </div>
 </footer>
 
-<nav class="dock" id="dock" aria-label="Quick links"><a href="#" data-t="Home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg></a><a href="#demo" data-t="Demo" aria-label="Demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M8 12h8"/></svg></a><a href="#how" data-t="How it works" aria-label="How it works"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5"/></svg></a><a href="#faq" data-t="FAQ" aria-label="FAQ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9a2.5 2.5 0 114 2c-.9.6-1.5 1.2-1.5 2.5M12 17h.01"/></svg></a><a href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification" data-t="GitHub" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13 6l-2 12"/></svg></a><a href="https://www.linkedin.com/in/athrva-raval/" data-t="LinkedIn" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0"/></svg></a></nav>
+<nav class="dock" id="dock" aria-label="Quick links"><a href="#" data-t="Home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg></a><a href="#demo" data-t="Demo" aria-label="Demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M8 12h8"/></svg></a><a href="#pipeline" data-t="Live pipeline" aria-label="Live pipeline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5"/></svg></a><a href="#faq" data-t="FAQ" aria-label="FAQ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 100-18 9 9 0 000 18zM9.5 9a2.5 2.5 0 114 2c-.9.6-1.5 1.2-1.5 2.5M12 17h.01"/></svg></a><a href="https://github.com/AtomicHalifax/ChestXRay-Disease-Classification" data-t="GitHub" aria-label="GitHub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13 6l-2 12"/></svg></a><a href="https://www.linkedin.com/in/athrva-raval/" data-t="LinkedIn" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0"/></svg></a></nav>
 
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
 <script>
@@ -502,6 +562,31 @@ dock.addEventListener("mouseleave",()=>dockItems.forEach(a=>a.style.width=a.styl
   // plain scroll check instead of IntersectionObserver: Chrome counts the clip-path, and an unrevealed heading must never get stuck invisible
   const check=()=>{const r=h.getBoundingClientRect(),vis=r.top<innerHeight*.9&&r.bottom>0;if(vis){h.classList.add("in");if(!raf)raf=requestAnimationFrame(frame)}else if(raf){cancelAnimationFrame(raf);raf=0}};
   addEventListener("scroll",check,{passive:true});addEventListener("resize",check);check();
+})();
+
+// in-page links scroll without leaving "#..." in the address bar
+document.addEventListener("click",e=>{const a=e.target.closest('a[href^="#"]');if(!a)return;e.preventDefault();
+  const id=a.getAttribute("href").slice(1);(id?document.getElementById(id):document.body)?.scrollIntoView({behavior:"smooth"});});
+
+// ---------- live pipeline: latest GitHub Actions runs (public API, no token; 60 req/h per visitor) ----------
+(async function(){
+  const API="https://api.github.com/repos/AtomicHalifax/ChestXRay-Disease-Classification/actions";
+  const j=u=>fetch(u).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
+  const dur=(a,b)=>{if(!a||!b)return"";const s=Math.round((new Date(b)-new Date(a))/1000);return s<60?s+"s":Math.floor(s/60)+"m "+(s%60)+"s"};
+  const ago=t=>{const m=Math.round((Date.now()-new Date(t))/6e4);return m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":Math.round(m/1440)+" d ago"};
+  const st=x=>x.status!=="completed"?"running":x.conclusion==="success"?"success":x.conclusion==="skipped"?"":"failure";
+  try{
+    const [ci,web]=await Promise.all(["ci.yml","pages.yml"].map(w=>j(`${API}/workflows/${w}/runs?branch=main&per_page=12`).then(r=>r.workflow_runs)));
+    const [ciJobs,webJobs]=await Promise.all([ci[0],web[0]].map(r=>j(r.jobs_url).then(r=>r.jobs)));
+    const job=n=>ciJobs.find(x=>x.name===n)||{},steps=(webJobs[0]||{}).steps||[],step=k=>steps.find(x=>x.name.includes(k))||{};
+    const S=[["Unit & API tests","CI",job("test")],["Alert-rule tests","CI",job("monitoring")],["Docker build + smoke test","CI",job("docker")],
+             ["ONNX export + parity check","Release",step("Export model")],["Sample films","Release",step("Sample films")],["Deploy to the web","Release",step("deploy-pages")]];
+    $("flow").innerHTML=S.map(([n,w,x])=>`<div class="stage ${x.status?st(x):""}"><span class="dot"></span><h4>${n}</h4><p>${dur(x.started_at,x.completed_at)||(x.status==="in_progress"?"running…":"—")}</p><small>${w}</small></div>`).join("");
+    $("runmeta").innerHTML=`<span>Last test run: <b>${ago(ci[0].created_at)}</b> · ${st(ci[0])}</span><span>Last release: <b>${ago(web[0].created_at)}</b> · ${st(web[0])}</span><span>Commit: <b>${ci[0].display_title.replace(/</g,"&lt;").slice(0,70)}</b></span>`;
+    const bars=runs=>{const max=Math.max(...runs.map(r=>new Date(r.updated_at)-new Date(r.run_started_at||r.created_at)),1);
+      return runs.slice().reverse().map(r=>{const d=new Date(r.updated_at)-new Date(r.run_started_at||r.created_at);return`<a class="${st(r)}" href="${r.html_url}" target="_blank" rel="noopener" style="height:${Math.max(8,d/max*100)}%" title="${r.display_title.replace(/"/g,"'")} · ${dur(r.run_started_at||r.created_at,r.updated_at)}"></a>`}).join("")};
+    $("hist").innerHTML=`<span>Tests</span><div class="bars2">${bars(ci)}</div><span>Releases</span><div class="bars2">${bars(web)}</div>`;
+  }catch(e){$("runmeta").textContent="Live status is unavailable right now (GitHub API limit reached) — try again in a few minutes.";}
 })();
 </script>
 </body>
