@@ -160,7 +160,7 @@ Potential future improvements include:
 * Perform hyperparameter optimization.
 * Validate on external chest X-ray datasets.
 * Investigate model calibration techniques.
-* Explore lightweight deployment strategies.
+* Calibrate per-finding thresholds.
 * Extend explainability analysis with additional XAI methods.
 
 ---
@@ -177,6 +177,8 @@ The completed project includes:
 * Presentation slides
 * Project poster
 * Professional GitHub repository
+* MLOps pipeline: quality gate, drift monitoring, CI/CD, Docker, monitoring stack ([MLOPS.md](../MLOPS.md))
+* Live website with in-browser inference: https://atomichalifax.github.io/ChestXRay-Disease-Classification/
 
 ---
 

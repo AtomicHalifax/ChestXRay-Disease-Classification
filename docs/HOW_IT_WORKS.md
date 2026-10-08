@@ -95,7 +95,9 @@ src/chexpert_cls/
   gradcam.py     heatmap generation
   predict.py     run the model on any image from the command line
   api.py         the web service (FastAPI)
-app.py           simple Gradio web demo
+app.py           simple Gradio demo (runs locally)
+scripts/         export_onnx.py (browser model), fetch_samples.py (demo images)
+docs/index.html  the website
 tests/           automatic tests that run on every push
 ```
 
@@ -124,9 +126,10 @@ Before training starts, `validate_csv` checks that the CSV has the right columns
 | `GET /version` | Which code version and which model are running |
 | `POST /predict` | Upload an X-ray and get five probabilities, the top finding, warnings and latency |
 | `POST /explain` | Upload an X-ray and get the Grad-CAM heatmap as a PNG |
+| `GET /drift` | Is the incoming data shifting? (see 7.9) |
 | `GET /metrics` | Numbers for monitoring (see 7.7) |
 
-**Input safety:** real chest X-rays are grayscale and roughly square. If someone uploads a colour photo, a tiny thumbnail or a very wide screenshot, the API adds a **warning**. With `CHEXPERT_STRICT_INPUT=1` it **rejects** the image instead. It also rejects files that aren't images (error 415) and files over 10 MB (error 413).
+**Input safety:** real chest X-rays are grayscale and roughly square. If someone uploads a colour photo, a tiny thumbnail or a very wide screenshot, the API adds a **warning**. With `CHEXPERT_STRICT_INPUT=1` it **rejects** the image instead. It only accepts PNG and JPEG (error 415 otherwise), stops reading after 10 MB (error 413), and refuses "decompression bombs": small files that unpack into gigantic images.
 
 ### 7.5 Docker
 The `Dockerfile` packages Python, CPU-only PyTorch, the code and (optionally) the model weights into one **image** that runs the same way on any machine.
@@ -190,6 +193,26 @@ It runs the model on every image in the folder and reports three things:
 3. **External validation (if labels exist):** AUROC per finding with confidence intervals. This is the honest answer to "how good is the model on this data?". It reads a simple labels CSV, or the NIH ChestX-ray14 label file directly.
 
 Notebook 02 runs this on **NIH ChestX-ray14**, a different hospital with a different labeller. Expect the AUROC to drop compared with CheXpert. That drop is normal, and reporting it is what separates a careful ML engineer from someone quoting one number.
+
+### 7.12 The website: the model in your browser
+Live at https://atomichalifax.github.io/ChestXRay-Disease-Classification/
+
+- `pages.yml` converts the PyTorch model to **ONNX**, a format that runs in a web browser.
+- Before publishing, it **checks the ONNX model gives the same answers as PyTorch** (within 0.0001) and the same Grad-CAM heatmap. If not, the release stops.
+- Trick worth explaining in an interview: for DenseNet, Grad-CAM can be written as plain maths on the last layer (`ReLU(weights × feature maps)`), so it's baked into the ONNX file and the browser needs no gradients.
+- The page reads GitHub's public API to show the **live pipeline**: whether the latest tests and release passed.
+- Cost: $0. GitHub Pages hosts it, and the visitor's device does the computing.
+
+### 7.13 Security
+- **No secrets** anywhere in the repo or website. `.env` is ignored by git.
+- **Uploads:** PNG/JPEG only, 10 MB cap, decompression-bomb guard.
+- **Rate limit:** max 30 uploads per minute per IP, then error 429.
+- **CORS:** only our website and localhost may call the API from a browser.
+- **Errors** never show stack traces.
+- **Dependabot** opens weekly PRs to update packages, and CI must pass before merging.
+- There's no database, login or file storage, so SQL injection, auth and bucket risks don't apply.
+
+Full checklist: [`MLOPS.md`](../MLOPS.md).
 
 ## 8. Limitations (know these well)
 

@@ -201,7 +201,15 @@ Visualization
    │
    ▼
 Explainability
+   │
+   ▼
+Release (quality gate → Docker image / ONNX browser build)
+   │
+   ▼
+Monitoring (Prometheus metrics, PSI drift, alerts)
 ```
+
+The release, deployment and monitoring side is described in [`MLOPS.md`](../MLOPS.md). Live site: https://atomichalifax.github.io/ChestXRay-Disease-Classification/
 
 This modular workflow separates each stage of the project, making the implementation easier to understand, reproduce, and extend.
 
