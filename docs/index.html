@@ -194,10 +194,6 @@ body{padding-bottom:96px}
 .stage h4{display:inline;font-size:14px;font-weight:600}
 .stage p{margin-top:8px;font:500 13px "JetBrains Mono",monospace;color:var(--soft)}
 .stage small{display:block;margin-top:2px;font-size:12px;color:var(--soft)}
-.hist{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:end;margin-top:30px;font-size:13px;color:var(--muted)}
-.bars2{display:flex;align-items:flex-end;gap:5px;height:44px}
-.bars2 a{flex:1;max-width:26px;border-radius:4px 4px 1px 1px;background:#16a34a;opacity:.85;min-height:4px}
-.bars2 a.failure{background:#dc2626}.bars2 a.running{background:#f59e0b}.bars2 a:hover{opacity:1}
 .pnote{margin-top:18px;font-size:13px;color:var(--soft)}
 @media (max-width:860px){.flow{grid-template-columns:1fr 1fr;gap:12px 0}.stage:not(:last-child)::after{display:none}}
 
@@ -303,8 +299,6 @@ body{padding-bottom:96px}
     <p class="sub">Pulled from GitHub Actions each time this page loads: the latest test run and the latest release of this site, stage by stage.</p>
     <div class="runmeta" id="runmeta">Loading the latest runs…</div>
     <div class="flow" id="flow"></div>
-    <div class="hist" id="hist"></div>
-    <p class="pnote">Green passed · red failed · amber running. Click a bar to open that run.</p>
   </div>
 </section>
 
@@ -365,6 +359,7 @@ body{padding-bottom:96px}
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
+const esc=t=>String(t).replace(/[&<>"']/g,c=>"&#"+c.charCodeAt(0)+";");
 const FINDINGS=["Atelectasis","Cardiomegaly","Consolidation","Edema","Pleural Effusion"];
 const MEAN=[0.485,0.456,0.406],STD=[0.229,0.224,0.225],S=224;
 
@@ -426,7 +421,7 @@ let SAMPLES=[];
 fetch("samples/samples.json").then(r=>r.json()).then(list=>{
   SAMPLES=list;
   $("tray").innerHTML=list.map((s,i)=>`<button draggable="true" data-i="${i}" aria-label="Sample film ${i+1}"><img src="samples/${s.id}.jpg" alt="" loading="lazy"></button>`).join("");
-  $("credits").innerHTML=list.map(s=>`<li><a href="${s.source_page}">${s.title}</a> — ${s.author}, ${s.license}. Converted to grayscale and resized.</li>`).join("");
+  $("credits").innerHTML=list.map(s=>`<li><a href="${/^https:\/\//.test(s.source_page)?esc(s.source_page):"#"}" rel="noopener">${esc(s.title)}</a> — ${esc(s.author)}, ${esc(s.license)}. Converted to grayscale and resized.</li>`).join("");
 }).catch(()=>{$("tray").innerHTML="<span class='meta'>Samples unavailable — upload your own image.</span>"});
 $("tray").addEventListener("click",e=>{const b=e.target.closest("button");if(b)useSample(+b.dataset.i)});
 $("tray").addEventListener("dragstart",e=>{const b=e.target.closest("button");if(b)e.dataTransfer.setData("text/x-sample",b.dataset.i)});
@@ -569,6 +564,7 @@ dock.addEventListener("mouseleave",()=>dockItems.forEach(a=>a.style.width=a.styl
   addEventListener("scroll",check,{passive:true});addEventListener("resize",check);check();
 })();
 
+if(location.hash){const h=decodeURIComponent(location.hash.slice(1));history.replaceState(null,"",location.pathname+location.search);if(h)addEventListener("load",()=>document.getElementById(h)?.scrollIntoView());}
 // in-page links scroll without leaving "#..." in the address bar
 document.addEventListener("click",e=>{const a=e.target.closest('a[href^="#"]');if(!a)return;e.preventDefault();
   const id=a.getAttribute("href").slice(1);(id?document.getElementById(id):document.body)?.scrollIntoView({behavior:"smooth"});});
@@ -581,16 +577,13 @@ document.addEventListener("click",e=>{const a=e.target.closest('a[href^="#"]');i
   const ago=t=>{const m=Math.round((Date.now()-new Date(t))/6e4);return m<60?m+" min ago":m<1440?Math.round(m/60)+" h ago":Math.round(m/1440)+" d ago"};
   const st=x=>x.status!=="completed"?"running":x.conclusion==="success"?"success":x.conclusion==="skipped"?"":"failure";
   try{
-    const [ci,web]=await Promise.all(["ci.yml","pages.yml"].map(w=>j(`${API}/workflows/${w}/runs?branch=main&per_page=12`).then(r=>r.workflow_runs)));
+    const [ci,web]=await Promise.all(["ci.yml","pages.yml"].map(w=>j(`${API}/workflows/${w}/runs?branch=main&per_page=1`).then(r=>r.workflow_runs)));
     const [ciJobs,webJobs]=await Promise.all([ci[0],web[0]].map(r=>j(r.jobs_url).then(r=>r.jobs)));
     const job=n=>ciJobs.find(x=>x.name===n)||{},steps=(webJobs[0]||{}).steps||[],step=k=>steps.find(x=>x.name.includes(k))||{};
     const S=[["Unit & API tests","CI",job("test")],["Alert-rule tests","CI",job("monitoring")],["Docker build + smoke test","CI",job("docker")],
              ["ONNX export + parity check","Release",step("Export model")],["Sample films","Release",step("Sample films")],["Deploy to the web","Release",step("deploy-pages")]];
     $("flow").innerHTML=S.map(([n,w,x])=>`<div class="stage ${x.status?st(x):""}"><span class="dot"></span><h4>${n}</h4><p>${dur(x.started_at,x.completed_at)||(x.status==="in_progress"?"running…":"—")}</p><small>${w}</small></div>`).join("");
     $("runmeta").innerHTML=`<span>Last test run: <b>${ago(ci[0].created_at)}</b> · ${st(ci[0])}</span><span>Last release: <b>${ago(web[0].created_at)}</b> · ${st(web[0])}</span><span>Commit: <b>${ci[0].display_title.replace(/</g,"&lt;").slice(0,70)}</b></span>`;
-    const bars=runs=>{const max=Math.max(...runs.map(r=>new Date(r.updated_at)-new Date(r.run_started_at||r.created_at)),1);
-      return runs.slice().reverse().map(r=>{const d=new Date(r.updated_at)-new Date(r.run_started_at||r.created_at);return`<a class="${st(r)}" href="${r.html_url}" target="_blank" rel="noopener" style="height:${Math.max(8,d/max*100)}%" title="${r.display_title.replace(/"/g,"'")} · ${dur(r.run_started_at||r.created_at,r.updated_at)}"></a>`}).join("")};
-    $("hist").innerHTML=`<span>Tests</span><div class="bars2">${bars(ci)}</div><span>Releases</span><div class="bars2">${bars(web)}</div>`;
   }catch(e){$("runmeta").textContent="Live status is unavailable right now (GitHub API limit reached) — try again in a few minutes.";}
 })();
 </script>
