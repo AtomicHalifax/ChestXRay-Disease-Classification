@@ -7,7 +7,9 @@ Environment variables
   CHEXPERT_WEIGHTS_SHA256   if set, refuse to start unless the checkpoint matches
   CHEXPERT_RANDOM_WEIGHTS   "1" = random weights, for tests / smoke checks only
   CHEXPERT_STRICT_INPUT     "1" = reject (422) images that fail the OOD checks
-  CHEXPERT_MAX_UPLOAD_MB    upload size limit (default 10)
+  CHEXPERT_MAX_UPLOAD_MB    upload size limit (default 10); only PNG/JPEG accepted
+  CHEXPERT_RATE_LIMIT       POST requests per minute per client IP (default 30)
+  CHEXPERT_CORS_ORIGINS     comma-separated allowed origins (default: the project site + localhost)
   CHEXPERT_DRIFT_REFERENCE  drift reference JSON (default models/drift_reference.json;
                             drift monitoring is off if the file does not exist)
   CHEXPERT_DRIFT_WINDOW     number of recent predictions compared (default 500)
@@ -24,9 +26,9 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from PIL import Image, UnidentifiedImageError
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
 
@@ -45,6 +47,9 @@ PROBS = Histogram("chexpert_probability", "Predicted probability", ["finding"],
 DRIFT = Gauge("chexpert_drift_psi", "PSI of recent predictions vs validation reference", ["finding"])
 
 STATE: dict = {}
+Image.MAX_IMAGE_PIXELS = 50_000_000  # PIL raises DecompressionBombError above 2x this
+ORIGINS = os.getenv("CHEXPERT_CORS_ORIGINS",
+                    "https://atomichalifax.github.io,http://localhost:8000,http://localhost:7860").split(",")
 
 
 def _sha256(path: Path) -> str:
@@ -84,18 +89,42 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="CheXpert DenseNet121 API", version=__version__, lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=["GET", "POST"])
+
+# ponytail: in-memory fixed window per IP; one process only, and behind a proxy every client shares one IP.
+# Use the proxy's limiter (or slowapi + Redis) if this is ever deployed publicly.
+_HITS: dict = {}
+_WINDOW = [0]
 
 
-def _read_image(upload: UploadFile, data: bytes) -> Image.Image:
-    limit = float(os.getenv("CHEXPERT_MAX_UPLOAD_MB", "10")) * 1024 * 1024
+@app.middleware("http")
+async def rate_limit(request: Request, call_next):
+    if request.method == "POST":
+        w = int(time.time() // 60)
+        if _WINDOW[0] != w:
+            _HITS.clear()
+            _WINDOW[0] = w
+        ip = request.client.host if request.client else "?"
+        _HITS[ip] = _HITS.get(ip, 0) + 1
+        if _HITS[ip] > int(os.getenv("CHEXPERT_RATE_LIMIT", "30")):
+            return JSONResponse({"detail": "too many requests"}, 429, headers={"Retry-After": "60"})
+    return await call_next(request)
+
+
+def _read_image(upload: UploadFile) -> Image.Image:
+    limit = int(float(os.getenv("CHEXPERT_MAX_UPLOAD_MB", "10")) * 1024 * 1024)
+    data = upload.file.read(limit + 1)  # never read more than the limit into memory
     if len(data) > limit:
         raise HTTPException(413, "file too large")
     try:
         img = Image.open(io.BytesIO(data))
+        if img.format not in ("PNG", "JPEG", "MPO"):  # MPO = JPEG from many phone cameras
+            raise HTTPException(415, "only PNG or JPEG images are accepted")
         img.load()
+    except Image.DecompressionBombError:
+        raise HTTPException(413, "image dimensions too large")
     except (UnidentifiedImageError, OSError):
-        raise HTTPException(415, f"could not decode {upload.filename!r} as an image")
+        raise HTTPException(415, "could not decode the file as an image")
     return img
 
 
@@ -114,7 +143,7 @@ def version():
 def predict(file: UploadFile = File(...)):
     t0 = time.perf_counter()
     try:
-        img = _read_image(file, file.file.read())
+        img = _read_image(file)
         warnings = image_warnings(img)
         if warnings and os.getenv("CHEXPERT_STRICT_INPUT") == "1":
             raise HTTPException(422, {"error": "input failed quality checks", "warnings": warnings})
@@ -146,7 +175,7 @@ def predict(file: UploadFile = File(...)):
 def explain(file: UploadFile = File(...), finding: str | None = Query(None)):
     t0 = time.perf_counter()
     try:
-        img = _read_image(file, file.file.read())
+        img = _read_image(file)
         if finding is not None and finding not in TARGET_DISEASES:
             raise HTTPException(422, f"finding must be one of {TARGET_DISEASES}")
         if finding is None:
