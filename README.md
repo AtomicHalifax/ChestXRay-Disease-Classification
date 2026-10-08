@@ -1,4 +1,4 @@
-# Chest X-ray Finding Classification (CheXpert, DenseNet121)
+# Chest X-ray Finding Classification 
 
 **[Live demo →](https://atomichalifax.github.io/ChestXRay-Disease-Classification/)** · [MLOps write-up](MLOPS.md) · [Model weights](https://huggingface.co/AtomicHalifax/ChestXRay-DenseNet121)
 
