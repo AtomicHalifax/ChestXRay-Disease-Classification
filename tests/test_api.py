@@ -74,6 +74,26 @@ def test_rejects_large_upload(client, monkeypatch):
     assert r.status_code == 413
 
 
+def test_rejects_other_formats(client):
+    buf = io.BytesIO()
+    Image.new("L", (64, 64)).save(buf, format="BMP")
+    r = client.post("/predict", files={"file": ("x.bmp", buf.getvalue(), "image/bmp")})
+    assert r.status_code == 415
+
+
+def test_rate_limit(client, monkeypatch):
+    monkeypatch.setenv("CHEXPERT_RATE_LIMIT", "0")
+    r = client.post("/predict", files={"file": ("x.png", _png(), "image/png")})
+    assert r.status_code == 429
+
+
+def test_cors_locked(client):
+    h = {"Origin": "https://evil.example", "Access-Control-Request-Method": "POST"}
+    assert "access-control-allow-origin" not in client.options("/predict", headers=h).headers
+    h["Origin"] = "https://atomichalifax.github.io"
+    assert client.options("/predict", headers=h).headers["access-control-allow-origin"] == h["Origin"]
+
+
 def test_explain_returns_png(client):
     r = client.post("/explain?finding=Edema", files={"file": ("x.png", _png(), "image/png")})
     assert r.status_code == 200
