@@ -3,7 +3,7 @@
 #   docker run -p 8000:8000 chexpert-api
 # Bake the weights into the image (no network needed at start-up):
 #   docker build --build-arg BAKE_WEIGHTS=1 -t chexpert-api .
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 ENV PIP_NO_CACHE_DIR=1 \
     PYTHONDONTWRITEBYTECODE=1 \
