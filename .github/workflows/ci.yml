@@ -8,7 +8,7 @@ jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -30,7 +30,7 @@ jobs:
   monitoring:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Validate Prometheus config and alert rules
         run: |
           docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus" --entrypoint promtool \
@@ -46,7 +46,7 @@ jobs:
     needs: test
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Build image
         run: docker build -t chexpert-api:ci .
       - name: Smoke test container
