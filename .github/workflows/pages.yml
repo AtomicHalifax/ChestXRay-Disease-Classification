@@ -37,7 +37,7 @@ jobs:
         run: python scripts/export_onnx.py --out docs/model.onnx
       - name: Sample films (Wikimedia, resized for the site)
         run: python scripts/fetch_samples.py --site docs/samples
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs
